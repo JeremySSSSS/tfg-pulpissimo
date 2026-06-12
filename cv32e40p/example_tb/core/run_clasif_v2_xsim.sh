@@ -76,7 +76,10 @@ if [ "${GUI:-0}" = "1" ]; then
   # "run all". El firmware (compilado con WAVES_HOLD) ejecuta wfi tras leer
   # los contadores: el core se duerme y los valores quedan congelados en
   # 12/5/7/6/8/5/0/150 hasta el final — miralos donde sea del tramo final.
-  xsim tb_top_clasif -gui \
+  # Si existe una configuración de ondas guardada, cargarla automáticamente
+  WCFG=""
+  [ -f clasif_v2/tb_top_clasif.wcfg ] && WCFG="--view clasif_v2/tb_top_clasif.wcfg"
+  xsim tb_top_clasif -gui ${WCFG} \
     --testplusarg firmware="${TEST}.hex" \
     --testplusarg maxcycles="${MAXCYCLES}"
 else

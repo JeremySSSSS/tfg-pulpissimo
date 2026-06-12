@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wave_config>
+   <wave_state>
+   </wave_state>
+   <db_ref_list>
+      <db_ref path="tb_top_clasif.wdb" id="1">
+         <top_modules>
+            <top_module name="cv32e40p_apu_core_pkg" />
+            <top_module name="cv32e40p_pkg" />
+            <top_module name="cv32e40p_tracer_pkg" />
+            <top_module name="fpnew_pkg" />
+            <top_module name="perturbation_pkg" />
+            <top_module name="std" />
+            <top_module name="tb_top" />
+            <top_module name="uvm_pkg" />
+         </top_modules>
+      </db_ref>
+   </db_ref_list>
+   <zoom_setting>
+      <ZoomStartTime time="200,059,993 ps"></ZoomStartTime>
+      <ZoomEndTime time="200,060,002 ps"></ZoomEndTime>
+      <Cursor1Time time="200,059,993 ps"></Cursor1Time>
+   </zoom_setting>
+   <column_width_setting>
+      <NameColumnWidth column_width="254"></NameColumnWidth>
+      <ValueColumnWidth column_width="124"></ValueColumnWidth>
+   </column_width_setting>
+   <WVObjectSize size="8" />
+   <wvobject type="array" fp_name="/tb_top/wrapper_i/wrapper_i/core_i/insn_classifier_i/alu_q">
+      <obj_property name="ElementShortName">alu_q[63:0]</obj_property>
+      <obj_property name="ObjectShortName">alu_q[63:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/tb_top/wrapper_i/wrapper_i/core_i/insn_classifier_i/mul_q">
+      <obj_property name="ElementShortName">mul_q[63:0]</obj_property>
+      <obj_property name="ObjectShortName">mul_q[63:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/tb_top/wrapper_i/wrapper_i/core_i/insn_classifier_i/mulh_q">
+      <obj_property name="ElementShortName">mulh_q[63:0]</obj_property>
+      <obj_property name="ObjectShortName">mulh_q[63:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/tb_top/wrapper_i/wrapper_i/core_i/insn_classifier_i/div_q">
+      <obj_property name="ElementShortName">div_q[63:0]</obj_property>
+      <obj_property name="ObjectShortName">div_q[63:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/tb_top/wrapper_i/wrapper_i/core_i/insn_classifier_i/mem_q">
+      <obj_property name="ElementShortName">mem_q[63:0]</obj_property>
+      <obj_property name="ObjectShortName">mem_q[63:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/tb_top/wrapper_i/wrapper_i/core_i/insn_classifier_i/ctrl_q">
+      <obj_property name="ElementShortName">ctrl_q[63:0]</obj_property>
+      <obj_property name="ObjectShortName">ctrl_q[63:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/tb_top/wrapper_i/wrapper_i/core_i/insn_classifier_i/float_q">
+      <obj_property name="ElementShortName">float_q[63:0]</obj_property>
+      <obj_property name="ObjectShortName">float_q[63:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/tb_top/wrapper_i/wrapper_i/core_i/insn_classifier_i/divcyc_q">
+      <obj_property name="ElementShortName">divcyc_q[63:0]</obj_property>
+      <obj_property name="ObjectShortName">divcyc_q[63:0]</obj_property>
+   </wvobject>
+</wave_config>
