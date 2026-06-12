@@ -124,6 +124,44 @@ Semántica de acceso idéntica al v1 (lectura por multiplexor en el core,
 escritura directa; csrrs/csrrc con rs1≠x0 sobre estos CSR no soportado, igual
 que v1).
 
+## 4b. Manejo de instrucciones multiciclo
+
+**Mecánica de conteo:** `mhpmevent_minstret` pulsa una sola vez por
+instrucción (cuando ID la valida); durante una EX multiciclo el pipeline está
+stalleado y nada más retira. Una `div` de 32 ciclos = un incremento en DIV.
+No requiere lógica adicional.
+
+**Semántica del modelo:** la energía de los ciclos extra queda dentro del
+coeficiente: `eᵢ = P̄·T/nᵢ` y `T` contiene todos los ciclos del bucle de
+caracterización (p. ej. `e_mulh ≈ 4·e_mul` sale solo de la medición). El
+problema real es la **varianza de ciclos dentro de la categoría**:
+
+| Categoría | Ciclos | Varianza intra-categoría |
+|---|---|---|
+| MULH | ~4 fijos | Ninguna |
+| MEM | 1 (TCDM) | Ninguna |
+| CTRL | flush fijo | Ninguna |
+| DIV | 4–32 según operandos | Alta → tratamiento abajo |
+| FLOAT | heterogénea por op (fadd corta, fdiv/fsqrt largas) | Media → tratamiento abajo |
+
+Tratamiento:
+1. **DIV — acotar, no solo promediar:** caracterizar el bucle de división 3
+   veces (operandos de latencia mínima, máxima y aleatorios) → `e_div_min`,
+   `e_div_max`, `e_div_típico` medidos. El modelo usa el típico; el documento
+   reporta el rango como cota de error de la categoría.
+2. **FLOAT:** caracterizar con mezcla representativa de operaciones y
+   documentar que el coeficiente refleja esa mezcla.
+3. **Stalls entre instrucciones** (load-use, jr-stall): su energía cae en
+   `P̄·T` y se reparte en los coeficientes de la ventana; en bucles dominados
+   los stalls propios de la categoría quedan dentro de su `eᵢ`. Los efectos
+   cruzados en cargas mixtas son el supuesto de independencia de contexto ya
+   declarado en el marco teórico (§2.2.1).
+4. **Alternativa descartada:** acumular ciclos por categoría en vez de
+   instrucciones (modelo casi exacto para DIV, pero cambia la clase de modelo
+   respecto a Tiwari/Fang y duplica el hardware). El experimento (1)
+   cuantifica el costo de no hacerlo; si resulta grande, se reporta como
+   trabajo futuro justificado por datos.
+
 ## 5. Cambios de RTL requeridos
 
 | Archivo | Cambio |
