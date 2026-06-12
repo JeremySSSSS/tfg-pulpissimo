@@ -30,8 +30,8 @@ La hipótesis del TFG es que esta estimación alcanza un error relativo medio in
 |---|---|---|
 | `pulpissimo/` | SoC PULPissimo: top-level FPGA, constraints, flujo de síntesis, bitstreams | `pulp-platform/pulpissimo @ bfc3d9a` |
 | `cv32e40p/` | Core CV32E40P con el clasificador integrado + firmware de caracterización | `pulp-platform/cv32e40p @ 7a49867` |
-| `tfg_doc/` | Documento escrito del TFG (fuentes LaTeX, figuras y PDF compilado: `main.pdf`) | — |
-| `DOCS/` | Figuras externas referenciadas por el documento (diagramas CV32E40P y PULPissimo) | — |
+| `Anteproyecto/` | Documento escrito del TFG (fuentes LaTeX, figuras y PDF compilado: `main.pdf`) | — |
+| `DOCS/` | Material de referencia: datasheets, papers, esquemáticos/PCB del medidor y figuras usadas por el documento | — |
 
 La historia de git separa la base de los cambios propios: el **commit inicial** es el
 árbol upstream sin modificar de ambos proyectos, y cada commit posterior agrupa un
