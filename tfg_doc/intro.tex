@@ -1,0 +1,124 @@
+\chapter{Introducción}
+\label{ch:intro}
+
+El crecimiento acelerado del IoT ha posicionado a los
+sistemas embebidos de ultrabaja potencia como una pieza central de la
+infraestructura tecnológica moderna. En 2025 se estimó que el número de
+dispositivos IoT conectados superaba los
+21\,000 millones a nivel global~\cite{iotanalytics2025},
+la mayoría de los cuales operan alimentados por baterías de tamaño reducido
+o mediante técnicas de recolección de energía del entorno~\cite{iotlowpowersurvey}. En este escenario,
+el presupuesto de potencia de un nodo típico se sitúa en el orden de los
+milivatios: el procesador, la radio, los sensores y la memoria compiten por
+ese margen mínimo, y la falta de eficiencia en el firmware se traduce
+directamente en una reducción de la vida útil del dispositivo.
+
+Para responder a esta demanda, la comunidad de arquitecturas de procesadores ha
+convergido en torno a RISC-V, un conjunto de instrucciones abierto, modular y
+libre de regalías que permite diseñar núcleos altamente especializados para
+aplicaciones de bajo consumo. Dentro de este ecosistema, el grupo de investigación PULP de ETH~Zürich ha desarrollado la plataforma PULPissimo~\cite{pulpissimo}, un
+SoC orientado a sistemas embebidos que integra el procesador CV32E40P~\cite{cv32e40p} como su componente central de cómputo.
+
+El CV32E40P implementa el ISA RISC-V RV32IMFCXpulp de 32 bits e incorpora
+extensiones vectoriales SIMD y de punto flotante que lo hacen especialmente
+adecuado para cargas de procesamiento de señales, control y aprendizaje
+automático en el borde de la red~\cite{cv32e40p}. A pesar de sus capacidades, el núcleo carece de mecanismos de inspección energética: no expone contadores de potencia,
+no implementa una interfaz interna de medición energética y no ofrece registros
+dedicados que permitan obtener un perfil de ejecución útil para estimar el
+consumo energético~\cite{leonvega2024efimon}.
+Esta ausencia obliga a recurrir a instrumentación física externa para relacionar
+una ejecución concreta con su consumo energético. Dicha instrumentación es
+necesaria para caracterizar y validar modelos de consumo, pero su uso como único
+mecanismo de análisis dificulta la comparación repetida de regiones de código
+durante el desarrollo de firmware.
+
+El modelado de consumo energético a nivel de instrucción es una técnica
+consolidada que puede cerrar esa brecha. Propuesta originalmente por
+Tiwari~\emph{et al.}~\cite{tiwari1994power} para procesadores Intel~486 y
+SPARC, se basa en la observación de que cada tipo de instrucción activa un
+subconjunto distinto de las unidades funcionales del procesador, generando
+un perfil de consumo característico y medible. Extendida recientemente a la
+arquitectura RISC-V por Fang~\cite{fang2021instruction}, esta metodología permite estimar la potencia de un programa
+como la suma ponderada del número de instrucciones ejecutadas por categoría.
+Sin embargo, la implementación clásica de esta metodología en la literatura
+opera de forma \emph{off-chip} y \emph{post-mortem}: el análisis se realiza
+sobre el binario ya generado, fuera del procesador.
+
+Este trabajo propone integrar ese modelo en el hardware del CV32E40P mediante
+contadores accesibles por CSR. Durante la ejecución bare-metal sobre
+PULPissimo, el firmware ejecuta la carga de prueba y el procesador acumula el
+número de instrucciones retiradas por categoría. Al finalizar la ejecución o una
+ventana de medición, los registros del clasificador se leen desde la computadora
+anfitriona y se combinan con coeficientes caracterizados previamente mediante un
+circuito de medición de potencia. La instrumentación
+externa no se elimina del flujo experimental: se usa para obtener la referencia
+física y validar el modelo, mientras que los contadores internos permiten
+repetir el análisis sin ejecutar una medición eléctrica completa para cada
+escenario posterior.
+
+% -----------------------------------------------------------------------
+\section{Planteamiento del problema}
+\label{sec:planteamiento}
+
+\subsection{Estado actual}
+\label{sec:estado_actual}
+
+La estimación de consumo energético depende de información que el procesador no
+siempre expone de forma directa. En plataformas con sistema operativo, parte de
+esa información puede obtenerse mediante infraestructura de monitoreo y
+herramientas externas. En una ejecución bare-metal, como la de PULPissimo sobre
+el CV32E40P, esa capa no existe: el firmware se ejecuta directamente sobre el
+hardware y el procesador no entrega por sí mismo conteos de instrucciones
+retiradas por categoría.
+
+Por ello, el análisis energético de esta plataforma depende de mediciones
+eléctricas externas o de análisis posterior del programa ejecutado. Ambos
+enfoques son útiles, pero no generan desde el propio procesador los datos
+necesarios para asociar ejecución y consumo estimado dentro del flujo de
+prueba.
+
+\subsection{Definición del problema}
+\label{sec:definicion}
+
+El problema que aborda este trabajo puede enunciarse de forma precisa: el
+procesador CV32E40P, ejecutando firmware en bare-metal sobre el SoC PULPissimo
+sintetizado en una FPGA, no dispone de un mecanismo interno que genere un
+histograma completo de instrucciones retiradas por categoría ni que permita
+extraer esa información desde el flujo de prueba para estimar el consumo
+energético observado en la plataforma.
+
+Como consecuencia, un desarrollador de firmware que necesite optimizar el
+consumo de su programa debe apoyarse en instrumentación eléctrica externa para
+cada escenario que desea estudiar. Esta instrumentación es útil como referencia
+física, pero no entrega una señal interna que pueda leerse desde el flujo de
+prueba para comparar regiones de código o automatizar análisis posteriores.
+
+Por tanto, la brecha central no es únicamente la ausencia de una medición física
+de potencia, sino la falta de un mecanismo interno que relacione la ejecución
+del firmware con una estimación de consumo obtenible a partir de las
+instrucciones vistas durante la ejecución.
+
+% -----------------------------------------------------------------------
+\section{Estructura del documento}
+\label{sec:estructura}
+
+En el \textbf{capítulo~\ref{ch:marco}} se presenta el marco teórico, que incluye
+la plataforma hardware, los fundamentos de análisis energético, el diseño RTL,
+la medición eléctrica y el estado del arte relacionado con la estimación de
+consumo a nivel de instrucción.
+
+En el \textbf{capítulo~\ref{ch:solucion}} se describe la solución propuesta:
+el circuito de medición de potencia, el módulo clasificador de instrucciones,
+su integración en el RTL del CV32E40P, la carga y lectura mediante JTAG, y el
+flujo de caracterización y análisis de datos.
+
+En el \textbf{capítulo~\ref{ch:obj}} se enuncian la hipótesis de trabajo, los
+objetivos del proyecto, las tareas asociadas, los alcances y las limitaciones.
+
+En el \textbf{capítulo~\ref{ch:experimento}} se presenta el experimento
+preliminar propuesto para validar el flujo de medición y la observabilidad de
+diferencias de potencia entre rutinas dominadas por distintas categorías de
+instrucción.
+
+En el \textbf{capítulo~\ref{ch:cron}} se muestra el cronograma de ejecución
+del proyecto mediante un diagrama de Gantt.

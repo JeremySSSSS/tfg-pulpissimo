@@ -1,0 +1,113 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Anteproyecto de Trabajo Final de Graduación
+% Escuela de Ingeniería Electrónica
+% Instituto Tecnológico de Costa Rica — Sede San Carlos
+%
+% Basado en la plantilla de P. Alvarado (palvarado@ietec.org)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\documentclass[12pt,oneside,letterpaper]{book}
+
+\usepackage[utf8]{inputenc}
+\usepackage{ifthen}
+
+% --------------------------------------------------------------------------
+% BOOK MODE
+\newboolean{bookmode}
+\setboolean{bookmode}{true}
+
+% DRAFT MODE
+\newboolean{draftmode}
+\setboolean{draftmode}{false}  % cambiar a false para versión final
+% --------------------------------------------------------------------------
+
+% Datos del documento
+\newcommand{\scriptAuthor}{Jeremy Jesús Soto Chacón}
+\newcommand{\scriptAuthorShort}{J.~Soto}
+\newcommand{\scriptAuthorID}{2021050722}
+
+\newcommand{\scriptTitle}{Módulo Hardware para Estimación de Consumo Energético
+por Categoría de Instrucción en Arquitecturas RISC-V}
+
+\newcommand{\scriptKeywords}{RISC-V, CV32E40P, consumo energético,
+clasificador de instrucciones, FPGA, PULPissimo, bare-metal,
+medición de potencia, CSR}
+
+\newcommand{\scriptType}{Anteproyecto de Trabajo Final de Graduación}
+
+\newcommand{\boxeditorial}{}
+
+\newcommand{\pdfAuthor}{\scriptAuthor}
+\newcommand{\pdfTitle}{\scriptTitle}
+\newcommand{\pdfKeywords}{\scriptKeywords}
+\newcommand{\pdfSubject}{\scriptType}
+
+% --------------------------------------------------------------------------
+\input{macros}
+
+\setAsesor{Luis G. León Vega}
+\setLectorI{Por definir}    % completar con nombre del lector I
+\setLectorII{Por definir}   % completar con nombre del lector II
+
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric,arrows.meta,positioning,fit,backgrounds,calc}
+\allowdisplaybreaks[3]
+% --------------------------------------------------------------------------
+
+\begin{document}
+  \graphicspath{{./}{./fig/}}
+
+  \pagenumbering{alph}
+  \renewcommand{\tablename}{Tabla}
+  \renewcommand{\listtablename}{\'Indice de tablas}
+  \renewcommand{\examplesolution}{Solución}
+  \pagestyle{empty}
+
+  \include{titlepage}
+  \include{disclaimer}
+  %\include{tribunal}  % Acta de Aprobación
+  %\include{acta}      % Acta de Evaluación
+  \include{resumen}
+  \include{dedicatoria}
+  \include{agradecimientos}
+
+  %--------------------------------------------------------------------------
+  \frontmatter
+  %--------------------------------------------------------------------------
+  \pagestyle{fancy}
+
+  \pdfbookmark[1]{Indice General}{Indice General}
+  \parskip0ex
+
+  \tableofcontents
+  \listoffigures
+  \listoftables
+
+  %\include{notation}
+  \include{glosario}
+
+  \parskip1.3ex
+
+  %--------------------------------------------------------------------------
+  \mainmatter
+  %--------------------------------------------------------------------------
+  \graphicspath{{./}{./fig/}}
+
+  \include{intro}
+  \include{marco_teo}
+  \include{solucion}
+  \include{objetivos}
+  \include{experimento}
+  \include{cronograma}
+
+  %--------------------------------------------------------------------------
+  \bibliographystyle{sty/plainurl}
+  \bibliography{referencias}
+  %--------------------------------------------------------------------------
+
+  %--------------------------------------------------------------------------
+  \appendix
+  %--------------------------------------------------------------------------
+  % \include{apendice}
+
+\end{document}

@@ -1,0 +1,75 @@
+\chapter*{Glosario}
+\phantomsection
+\addcontentsline{toc}{chapter}{Glosario}
+\markboth{Glosario}{Glosario}
+\thispagestyle{empty}
+
+\begin{description}
+  \item[Bare-metal] Modo de ejecución en que el software corre directamente sobre
+        el hardware sin sistema operativo intermedio. En este trabajo se refiere
+        al firmware que se ejecuta sobre el CV32E40P dentro del SoC PULPissimo,
+        accediendo a los periféricos y registros CSR sin ninguna capa de
+        abstracción de sistema operativo.
+
+  \item[APU] Unidad de procesamiento auxiliar (\textit{Auxiliary Processing
+        Unit}). Interfaz del CV32E40P que enlaza el núcleo con coprocesadores
+        externos como la FPU.
+
+  \item[BRAM] Memoria embebida en bloque (\textit{Block RAM}). Recurso de
+        memoria síncrona integrado en las FPGA, organizado en bloques de
+        capacidad fija.
+
+  \item[CV32E40P] Procesador RISC-V de 32 bits desarrollado por el OpenHW Group
+        como evolución del núcleo RI5CY del equipo PULP. Implementa el ISA
+        RV32IMFC con las extensiones Xpulp y constituye el núcleo central del
+        SoC utilizado en este trabajo.
+
+  \item[GDB] Depurador usado para cargar firmware, controlar la ejecución y leer
+        registros del procesador a través de OpenOCD.
+
+  \item[HPC] Cómputo de alto rendimiento (\textit{High-Performance Computing}).
+        Categoría de plataformas con sistema operativo y contadores de hardware
+        expuestos para telemetría energética estandarizada.
+
+  \item[IoT] Internet de las cosas (\textit{Internet of Things}). Ecosistema de
+        dispositivos embebidos conectados que operan con presupuestos de potencia
+        limitados.
+
+  \item[ISA] Arquitectura del conjunto de instrucciones
+        (\textit{Instruction Set Architecture}). Define la interfaz visible entre
+        el software y el procesador.
+
+  \item[JTAG] Interfaz estándar IEEE~1149.1 usada para prueba y depuración de
+        circuitos mediante señales serie como TCK, TMS, TDI y TDO.
+
+  \item[LUT] Tabla de búsqueda (\textit{Look-Up Table}). Bloque combinacional
+        básico de las FPGA, configurable para implementar cualquier función
+        lógica de pocas entradas.
+
+  \item[MPSSE] Motor síncrono multiprotocolo de FTDI
+        (\textit{Multi-Protocol Synchronous Serial Engine}) usado para generar
+        señales JTAG desde el FT232H.
+
+  \item[OpenOCD] Herramienta de depuración que controla el acceso JTAG y expone
+        una interfaz para que GDB pueda cargar programas y leer registros del
+        procesador.
+
+  \item[SIMD] Una instrucción, múltiples datos
+        (\textit{Single Instruction Multiple Data}). Estilo de ejecución
+        vectorial en el que una misma instrucción procesa varios operandos
+        empaquetados en un mismo registro.
+
+  \item[SoC] Sistema en un chip (\textit{System-on-Chip}). Integración de
+        procesador, memoria, buses y periféricos dentro de una misma plataforma.
+
+  \item[TCDM] Memoria de datos estrechamente acoplada
+        (\textit{Tightly Coupled Data Memory}). En PULPissimo se refiere al acceso
+        directo del procesador a la SRAM interna.
+\end{description}
+
+\cleardoublepage
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "main"
+%%% End:

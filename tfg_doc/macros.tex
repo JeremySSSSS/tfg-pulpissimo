@@ -1,0 +1,157 @@
+%% macros.tex — paquetes y macros para el anteproyecto TFG
+%% Basado en la plantilla de P. Alvarado, EIE-TEC
+
+\usepackage{ifpdf}
+\newcommand{\ifdraft}[2]{\ifthenelse{\boolean{draftmode}}{#1}{#2}}
+\newcommand{\ifbook}[2]{\ifthenelse{\boolean{bookmode}}{#1}{#2}}
+
+%% Idioma y codificación
+\usepackage{csquotes}
+\usepackage[spanish,es-noindentfirst]{babel}
+
+%% Matemáticas
+\usepackage{amsmath}
+\usepackage{amssymb,amstext}
+\usepackage{nicefrac}
+
+%% Tablas y figuras
+\usepackage{array}
+\usepackage{colortbl}
+\usepackage{longtable}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{multicol}
+\usepackage{float}
+\usepackage[format=hang,font=small,labelfont=bf]{caption}
+\usepackage{graphicx}
+
+%% Listas
+\usepackage{enumitem}
+\newlist{compactitem}{itemize}{3}
+\setlist[compactitem]{topsep=0pt,partopsep=0pt,itemsep=0pt,parsep=0pt}
+\setlist[compactitem,1]{label=\textbullet}
+\setlist[compactitem,2]{label=---}
+\setlist[compactitem,3]{label=*}
+
+%% Tipografía
+\usepackage[expansion=false]{microtype}
+
+%% Estilos de página
+\usepackage{vmargin}
+\setpapersize{USletter}
+\setmarginsrb{33mm}{8mm}{23mm}{7mm}{15pt}{15pt}{7mm}{12mm}
+
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\usepackage{afterpage}
+
+%% Interlineado
+\renewcommand{\baselinestretch}{1.1}
+\parindent0em
+\parskip1.3ex
+
+%% Profundidad de numeración y TOC
+\setcounter{secnumdepth}{2}
+\setcounter{tocdepth}{2}
+
+%% Estilo TEC
+\ifdraft{%
+  \usepackage[todo]{sty/tecStyle}
+}{%
+  \usepackage{sty/tecStyle}
+}
+
+%% TOC bind
+\usepackage[nottoc]{tocbibind}
+
+%% URLs
+\usepackage{url}
+\usepackage{rotating}
+
+%% Biblatex (cargado en main.tex — no cargar aquí de nuevo)
+
+%% Placeholder para figuras pendientes (no requiere archivo externo)
+\newcommand{\figpend}[1][0.8\textwidth]{%
+  \noindent\makebox[#1]{%
+    \fbox{\begin{minipage}[c][4cm]{#1}%
+      \centering\color{gray}\textit{[Figura pendiente]}%
+    \end{minipage}}%
+  }}
+
+%% Hyperref (siempre al final)
+\ifpdf
+  \ifdraft{%
+    \usepackage[naturalnames=true,linktocpage,hyperindex,colorlinks,
+                urlcolor=dkred,filecolor=dkmagenta,linkcolor=dkred,
+                citecolor=dkgreen,plainpages=false,pdfpagelabels,
+                pdfpagemode=UseOutlines,bookmarksnumbered=true,
+                pdfpagelayout=OneColumn,pdfview=FitH,
+                pdfstartview=FitH]{hyperref}
+  }{%
+    \usepackage[naturalnames=true,linktocpage,hyperindex,colorlinks,
+                urlcolor=dkred,filecolor=dkmagenta,linkcolor=dkred,
+                citecolor=dkgreen,plainpages=false,pdfpagelabels,
+                pdfpagemode=UseOutlines,bookmarksnumbered=true,
+                pdfpagelayout=OneColumn,pdfview=FitH,
+                pdfstartview=FitH]{hyperref}
+  }
+  \usepackage[figure]{hypcap}
+  \pdfadjustspacing=1
+\else
+  \usepackage{graphicx}
+  \usepackage[ps2pdf,linktocpage,hyperindex,
+              pdfpagemode=UseOutlines,pdfstartview=FitH]{hyperref}
+\fi
+
+\AtBeginDocument{%
+  \hypersetup{pdftitle={\pdfTitle},pdfsubject={\pdfSubject},
+              pdfauthor={\pdfAuthor},pdfkeywords={\pdfKeywords}}%
+}
+
+%% Headers y footers
+\newcommand{\copyrightfooter}{\tiny{\copyright \the\year\ --- \scriptAuthorShort \qquad Uso exclusivo ITCR}}
+\newcommand{\draftfoot}{\ifdraft{\textcolor{dkblue}{\tiny\textsl{Borrador: \today}}}{}}
+
+\pagestyle{fancy}
+\renewcommand{\chaptermark}[1]{\markboth{{\small\thechapter\hspace*{1mm}#1}}{}}
+\renewcommand{\sectionmark}[1]{\markright{{\small\thesection\hspace*{1mm}#1}}{}}
+\lhead[{\small\thepage}]{\fancyplain{}{{\slshape\small\nouppercase{\leftmark}}}}
+\chead[]{}
+\rhead[\fancyplain{}{{\slshape\small\nouppercase{\rightmark}}}]{{\small\thepage}}
+\lfoot[]{\draftfoot}
+\ifbook{\cfoot[]{}}{\cfoot[\copyrightfooter]{\copyrightfooter}}
+\rfoot[\draftfoot]{}
+\renewcommand{\headrulewidth}{0.5pt}
+\renewcommand{\footrulewidth}{0pt}
+
+%% Caption para tablas
+\captionsetup[table]{position=top,format=hang,
+  textfont={normalsize},labelfont={normalsize,bf}}
+\addto\extrasspanish{\renewcommand{\tablename}{Tabla}}
+\addto\extrasspanish{\renewcommand{\listtablename}{\'Indice de tablas}}
+
+%% Comandos para tribunal
+\newcommand{\nameLectorI}{$<$\emph{Use setLectorI en main.tex}$>$}
+\newcommand{\genderLectorI}{$<$\emph{Use setLectorI en main.tex}$>$}
+\newcommand{\setLectorI}[1][M]{%
+  \ifthenelse{\equal{#1}{F}}{\renewcommand{\genderLectorI}{Profesora Lectora}}%
+                             {\renewcommand{\genderLectorI}{Profesor Lector}}
+  \lectorIRelay}
+\newcommand{\lectorIRelay}[1]{\renewcommand{\nameLectorI}{#1}}
+
+\newcommand{\nameLectorII}{$<$\emph{Use setLectorII en main.tex}$>$}
+\newcommand{\genderLectorII}{$<$\emph{Use setLectorII en main.tex}$>$}
+\newcommand{\setLectorII}[1][M]{%
+  \ifthenelse{\equal{#1}{F}}{\renewcommand{\genderLectorII}{Profesora Lectora}}%
+                             {\renewcommand{\genderLectorII}{Profesor Lector}}
+  \lectorIIRelay}
+\newcommand{\lectorIIRelay}[1]{\renewcommand{\nameLectorII}{#1}}
+
+\newcommand{\nameAsesor}{$<$\emph{Use setAsesor en main.tex}$>$}
+\newcommand{\genderAsesor}{Profesor Asesor}
+\newcommand{\setAsesor}[1][M]{%
+  \ifthenelse{\equal{#1}{F}}{\renewcommand{\genderAsesor}{Profesora Asesora}}%
+                             {\renewcommand{\genderAsesor}{Profesor Asesor}}
+  \asesorRelay}
+\newcommand{\asesorRelay}[1]{\renewcommand{\nameAsesor}{#1}}

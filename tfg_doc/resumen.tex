@@ -1,0 +1,61 @@
+\chapter*{Resumen}
+\thispagestyle{empty}
+
+El crecimiento del IoT ha impulsado una demanda creciente de
+dispositivos que operan con presupuestos de potencia muy limitados, donde la
+eficiencia del software es tan determinante como la del hardware. Sin embargo,
+los procesadores RISC-V de bajo consumo orientados a estas aplicaciones no
+ofrecen ningún mecanismo que permita al firmware relacionar su ejecución con una
+estimación de energía, obligando a los desarrolladores a recurrir a
+equipos externos para caracterizar el comportamiento de sus
+aplicaciones.
+
+Este trabajo propone integrar directamente en el procesador CV32E40P, sobre la
+plataforma PULPissimo, un módulo hardware que clasifica las instrucciones
+ejecutadas y mantiene contadores accesibles desde el propio firmware, sin
+requerir sistema operativo. La estimación se apoya en un modelo por categoría
+de instrucción cuyos coeficientes se caracterizan experimentalmente mediante un
+circuito de medición de potencia dedicado para la plataforma FPGA. La
+instrumentación externa se utiliza para caracterizar y validar el modelo; una
+vez obtenidos los coeficientes, el sistema puede estimar el consumo asociado a
+la ejecución del firmware a partir de los contadores internos, sin repetir una
+medición eléctrica completa para cada análisis. Como hipótesis de trabajo, se
+plantea alcanzar un error relativo medio inferior al 10\,\% respecto a la
+medición eléctrica de referencia.
+
+\bigskip
+\textbf{Palabras clave:} \scriptKeywords
+
+\clearpage
+\chapter*{Abstract}
+\thispagestyle{empty}
+
+The growth of the Internet of Things has driven increasing demand for devices
+that operate under strict power budgets, where software efficiency is as
+decisive as hardware efficiency. However, low-power RISC-V processors targeting
+these applications provide no mechanism for firmware to relate its execution to
+an energy estimate, forcing developers to rely on external laboratory equipment
+to characterize the behavior of their applications.
+
+This work proposes integrating directly into the CV32E40P processor, on the
+PULPissimo platform, a hardware module that classifies executed instructions and
+maintains counters accessible from firmware itself, without requiring an
+operating system. The estimation relies on an instruction-category model whose
+coefficients are experimentally characterized using external power measurement
+instrumentation for the FPGA platform. This instrumentation is required for
+characterization and validation; once the coefficients are obtained, the system
+can estimate the energy consumption associated with firmware execution from the
+internal counters without repeating a full electrical measurement for every
+analysis. The working hypothesis targets a mean relative error below~10\,\%
+with respect to the reference electrical measurement.
+
+\bigskip
+\textbf{Keywords:} RISC-V, CV32E40P, energy consumption, instruction classifier,
+FPGA, PULPissimo, bare-metal, power measurement, CSR
+
+\cleardoublepage
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "main"
+%%% End:
