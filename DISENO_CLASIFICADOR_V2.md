@@ -109,15 +109,18 @@ CSR se leen muchos ciclos después).
 
 14 CSR en 0xBC0–0xBCD (custom RW de modo máquina: bits [9:8]=11, [11:10]=10).
 
-| Par | LO | HI | Contador |
-|-----|----|----|----------|
-| 1 | 0xBC0 | 0xBC1 | ALU_SIMPLE |
-| 2 | 0xBC2 | 0xBC3 | MUL |
-| 3 | 0xBC4 | 0xBC5 | MULH |
-| 4 | 0xBC6 | 0xBC7 | DIV |
-| 5 | 0xBC8 | 0xBC9 | MEM |
-| 6 | 0xBCA | 0xBCB | CTRL |
-| 7 | 0xBCC | 0xBCD | FLOAT |
+| Par | LO | HI | Contador | Cuenta |
+|-----|----|----|----------|--------|
+| 1 | 0xBC0 | 0xBC1 | ALU_SIMPLE | instrucciones |
+| 2 | 0xBC2 | 0xBC3 | MUL | instrucciones |
+| 3 | 0xBC4 | 0xBC5 | MULH | instrucciones |
+| 4 | 0xBC6 | 0xBC7 | DIV | instrucciones |
+| 5 | 0xBC8 | 0xBC9 | MEM | instrucciones |
+| 6 | 0xBCA | 0xBCB | CTRL | instrucciones |
+| 7 | 0xBCC | 0xBCD | FLOAT | instrucciones |
+| 8 | 0xBCE | 0xBCF | DIV_CYC | **ciclos** de ocupación del divisor |
+
+El rango 0xBC0–0xBCF queda completo: 8 contadores de 64 bits, 16 CSR.
 
 Lectura: `(HI << 32) | LO`. Escritura de 0 en ambos resetea el contador.
 Semántica de acceso idéntica al v1 (lectura por multiplexor en el core,
@@ -144,11 +147,34 @@ problema real es la **varianza de ciclos dentro de la categoría**:
 | DIV | 4–32 según operandos | Alta → tratamiento abajo |
 | FLOAT | heterogénea por op (fadd corta, fdiv/fsqrt largas) | Media → tratamiento abajo |
 
-Tratamiento:
-1. **DIV — acotar, no solo promediar:** caracterizar el bucle de división 3
-   veces (operandos de latencia mínima, máxima y aleatorios) → `e_div_min`,
-   `e_div_max`, `e_div_típico` medidos. El modelo usa el típico; el documento
-   reporta el rango como cota de error de la categoría.
+Tratamiento (**modelo híbrido, decisión 2026-06-11**): *latencia constante →
+contar instrucciones; latencia variable por datos → contar ciclos de
+ocupación de la unidad.*
+
+1. **DIV — contador de ciclos dedicado (DIV_CYC):** además del contador de
+   instrucciones, un 8.º contador acumula 1 **cada ciclo** en que EX está
+   ocupado por una división (`alu_en_i && alu_operator_i ∈ {DIV,DIVU,REM,REMU}`,
+   sin gatear por retire). Funciona sin señales nuevas porque los registros
+   ID/EX retienen el operador durante todo el stall multiciclo
+   (`id_stage:1472-1573`: solo cargan con `ex_ready`). El modelo pasa a:
+
+   `E = Σ eᵢ·nᵢ (6 categorías de latencia fija) + p_div·c_div`
+
+   donde `p_div` = energía por ciclo de división (casi constante: cada
+   iteración del divisor serial hace el mismo shift+resta) y `c_div` el valor
+   de DIV_CYC. La caracterización `p_div = P̄·T/c_div` es más robusta que la
+   versión por instrucción (independiente de los operandos del bucle de
+   calibración). `n_div` se sigue contando: sirve para el invariante, y
+   `c_div/n_div` reporta la latencia promedio observada.
+   La caracterización con operandos de latencia mín/máx/aleatoria se mantiene
+   como **validación de que p_div es constante** (los tres deben dar el mismo
+   p_div dentro del ruido).
+
+   Nota de implementación: las burbujas del pipeline cargan los regs ID/EX
+   con `alu_en=1, ALU_SLTU` (`id_stage:1593-1597`) — no contaminan DIV_CYC
+   (SLTU ∉ ops de división) ni los contadores de instrucciones (las burbujas
+   no retiran). Esto descarta de paso generalizar el conteo por ciclos a las
+   demás categorías sin un calificador de validez adicional.
 2. **FLOAT:** caracterizar con mezcla representativa de operaciones y
    documentar que el coeficiente refleja esa mezcla.
 3. **Stalls entre instrucciones** (load-use, jr-stall): su energía cae en
@@ -156,11 +182,13 @@ Tratamiento:
    los stalls propios de la categoría quedan dentro de su `eᵢ`. Los efectos
    cruzados en cargas mixtas son el supuesto de independencia de contexto ya
    declarado en el marco teórico (§2.2.1).
-4. **Alternativa descartada:** acumular ciclos por categoría en vez de
-   instrucciones (modelo casi exacto para DIV, pero cambia la clase de modelo
-   respecto a Tiwari/Fang y duplica el hardware). El experimento (1)
-   cuantifica el costo de no hacerlo; si resulta grande, se reporta como
-   trabajo futuro justificado por datos.
+4. **Alternativa descartada — ciclos para TODAS las categorías:** cambia la
+   clase de modelo respecto a Tiwari/Fang, duplica el hardware y además las
+   burbujas (alu_en=1/SLTU) exigirían calificadores de validez por categoría.
+   El híbrido (ciclos solo donde la latencia es variable) captura casi todo
+   el beneficio a una fracción del costo. Si FLOAT resulta relevante en la
+   caracterización (FPU presente y fdiv/fsqrt frecuentes), se evalúa un
+   contador FPU_CYC análogo con el handshake del APU — decisión diferida.
 
 ## 5. Cambios de RTL requeridos
 
@@ -168,9 +196,9 @@ Tratamiento:
 |---|---|
 | `rtl/cv32e40p_id_stage.sv` | Nuevo evento flopeado junto a los demás: `mhpmevent_system_o <= minstret && (mret_insn_dec \|\| uret_insn_dec \|\| dret_insn_dec \|\| wfi_insn_dec \|\| fencei_insn_dec)`. Las señales `*_dec` ya existen (l.964-977). +1 puerto |
 | `rtl/cv32e40p_core.sv` | Cablear al clasificador: `mult_operator_ex` (l.183), `mhpmevent_branch_taken` (l.336), `mhpmevent_system` (nuevo). Actualizar instancia (l.1040+) |
-| `rtl/cv32e40p_insn_classifier.sv` | Reescritura: 7 contadores, condiciones de §3, flop `branch_q1`, filtro `!csr_access_i && !system_i`, mux de lectura de 14 CSR |
-| `rtl/include/cv32e40p_pkg.sv` | 14 direcciones CSR (0xBC0–0xBCD) en `csr_num_e` |
-| `rtl/cv32e40p_decoder.sv` | Aceptar los 2 CSR nuevos (0xBCC/0xBCD) como accesos válidos |
+| `rtl/cv32e40p_insn_classifier.sv` | Reescritura: 7 contadores de instrucciones + DIV_CYC (suma cada ciclo con operador DIV, sin retire), condiciones de §3, flop `branch_q1`, filtro `!csr_access_i && !system_i`, mux de lectura de 16 CSR |
+| `rtl/include/cv32e40p_pkg.sv` | 16 direcciones CSR (0xBC0–0xBCF) en `csr_num_e` |
+| `rtl/cv32e40p_decoder.sv` | Aceptar los 4 CSR nuevos (0xBCC–0xBCF) como accesos válidos |
 
 **No se tocan:** ALU, multiplicador, divisor, LSU, cs_registers.
 `fence` y `fence.i` comparten `fencei_insn_o` (`decoder:2601-2611`) — una sola
@@ -196,8 +224,11 @@ Suite auto-verificable basada en **modelo dorado**:
 2. Un script parsea el trace de instrucciones retiradas del CV32E40P
    (tracer en `bhv/`), clasifica cada instrucción en software con las reglas
    de §2/§3 y calcula los conteos esperados.
-3. PASS si CSR == golden para los 7 contadores y se cumple el invariante
-   `Σ nᵢ + n_csr + n_system = minstret`.
+3. PASS si CSR == golden para los 7 contadores de instrucciones y se cumple
+   el invariante `Σ nᵢ + n_csr + n_system = minstret`.
+4. **DIV_CYC**: validación con divisiones dirigidas de operandos conocidos
+   (la latencia del divisor es función de los operandos) → `c_div` esperado
+   exacto por test; sanity general: `lat_min·n_div ≤ c_div ≤ lat_max·n_div`.
 
 Casos a cubrir: bucles dominados por cada categoría (7), branches
 tomados/no-tomados mezclados, div con operandos extremos (latencia mín/máx),
