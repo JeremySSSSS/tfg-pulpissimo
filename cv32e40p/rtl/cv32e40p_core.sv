@@ -339,6 +339,7 @@ module cv32e40p_core
   logic                           mhpmevent_imiss;
   logic                           mhpmevent_ld_stall;
   logic                           mhpmevent_pipe_stall;
+  logic                           mhpmevent_system;
 
   logic                           perf_imiss;
 
@@ -729,6 +730,7 @@ module cv32e40p_core
       .mhpmevent_imiss_o       (mhpmevent_imiss),
       .mhpmevent_ld_stall_o    (mhpmevent_ld_stall),
       .mhpmevent_pipe_stall_o  (mhpmevent_pipe_stall),
+      .mhpmevent_system_o      (mhpmevent_system),
 
       .perf_imiss_i(perf_imiss),
       .mcounteren_i(mcounteren)
@@ -1038,25 +1040,28 @@ module cv32e40p_core
   );
 
   cv32e40p_insn_classifier insn_classifier_i (
-      .clk_i         (clk),
-      .rst_ni        (rst_ni),
+      .clk_i          (clk),
+      .rst_ni         (rst_ni),
 
-      .retire_i      (mhpmevent_minstret),
-      .load_i        (mhpmevent_load),
-      .store_i       (mhpmevent_store),
-      .jump_i        (mhpmevent_jump),
-      .branch_i      (mhpmevent_branch),
-      .alu_en_i      (alu_en_ex),
-      .alu_operator_i(alu_operator_ex),
-      .mult_en_i     (mult_en_ex),
-      .apu_en_i      (apu_en_ex),
-      .csr_access_i  (csr_access_ex),
+      .retire_i       (mhpmevent_minstret),
+      .load_i         (mhpmevent_load),
+      .store_i        (mhpmevent_store),
+      .jump_i         (mhpmevent_jump),
+      .branch_i       (mhpmevent_branch),
+      .branch_taken_i (mhpmevent_branch_taken),
+      .alu_en_i       (alu_en_ex),
+      .alu_operator_i (alu_operator_ex),
+      .mult_en_i      (mult_en_ex),
+      .mult_operator_i(mult_operator_ex),
+      .apu_en_i       (apu_en_ex),
+      .csr_access_i   (csr_access_ex),
+      .system_i       (mhpmevent_system),
 
-      .csr_addr_i    (csr_addr),
-      .csr_op_i      (csr_op),
-      .csr_wdata_i   (csr_wdata),
-      .csr_hit_o     (cat_csr_hit),
-      .csr_rdata_o   (cat_csr_rdata)
+      .csr_addr_i     (csr_addr),
+      .csr_op_i       (csr_op),
+      .csr_wdata_i    (csr_wdata),
+      .csr_hit_o      (cat_csr_hit),
+      .csr_rdata_o    (cat_csr_rdata)
   );
 
   assign csr_rdata = cat_csr_hit ? cat_csr_rdata : csr_rdata_cs;

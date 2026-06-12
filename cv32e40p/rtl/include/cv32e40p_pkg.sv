@@ -283,19 +283,25 @@ package cv32e40p_pkg;
     // Privilege
     CSR_PRIVLV = 12'hCC1,  // Custom CSR. Privilege Level
 
-    // Instruction-category counters
-    CSR_CAT_ARITH_LO  = 12'hBC0,
-    CSR_CAT_ARITH_HI  = 12'hBC1,
-    CSR_CAT_LOGIC_LO  = 12'hBC2,
-    CSR_CAT_LOGIC_HI  = 12'hBC3,
-    CSR_CAT_MEMORY_LO = 12'hBC4,
-    CSR_CAT_MEMORY_HI = 12'hBC5,
-    CSR_CAT_BRANCH_LO = 12'hBC6,
-    CSR_CAT_BRANCH_HI = 12'hBC7,
-    CSR_CAT_JUMP_LO   = 12'hBC8,
-    CSR_CAT_JUMP_HI   = 12'hBC9,
-    CSR_CAT_FLOAT_LO  = 12'hBCA,
-    CSR_CAT_FLOAT_HI  = 12'hBCB,
+    // Instruction-category counters (clasificador v2: categorías por unidad
+    // activa, ver DISENO_CLASIFICADOR_V2.md). 8 contadores de 64 bits en
+    // pares LO/HI; DIVCYC acumula ciclos de ocupación del divisor.
+    CSR_CAT_ALU_LO    = 12'hBC0,
+    CSR_CAT_ALU_HI    = 12'hBC1,
+    CSR_CAT_MUL_LO    = 12'hBC2,
+    CSR_CAT_MUL_HI    = 12'hBC3,
+    CSR_CAT_MULH_LO   = 12'hBC4,
+    CSR_CAT_MULH_HI   = 12'hBC5,
+    CSR_CAT_DIV_LO    = 12'hBC6,
+    CSR_CAT_DIV_HI    = 12'hBC7,
+    CSR_CAT_MEM_LO    = 12'hBC8,
+    CSR_CAT_MEM_HI    = 12'hBC9,
+    CSR_CAT_CTRL_LO   = 12'hBCA,
+    CSR_CAT_CTRL_HI   = 12'hBCB,
+    CSR_CAT_FLOAT_LO  = 12'hBCC,
+    CSR_CAT_FLOAT_HI  = 12'hBCD,
+    CSR_CAT_DIVCYC_LO = 12'hBCE,
+    CSR_CAT_DIVCYC_HI = 12'hBCF,
 
     ///////////////////////////////////////////////////////
     // Machine CSRs

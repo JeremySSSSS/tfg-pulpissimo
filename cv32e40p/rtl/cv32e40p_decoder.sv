@@ -2848,19 +2848,23 @@ module cv32e40p_decoder import cv32e40p_pkg::*; import cv32e40p_apu_core_pkg::*;
                 csr_status_o = 1'b1;
               end
 
-            // Instruction-category counter access
-            CSR_CAT_ARITH_LO,
-              CSR_CAT_ARITH_HI,
-              CSR_CAT_LOGIC_LO,
-              CSR_CAT_LOGIC_HI,
-              CSR_CAT_MEMORY_LO,
-              CSR_CAT_MEMORY_HI,
-              CSR_CAT_BRANCH_LO,
-              CSR_CAT_BRANCH_HI,
-              CSR_CAT_JUMP_LO,
-              CSR_CAT_JUMP_HI,
+            // Instruction-category counter access (clasificador v2, 16 CSR)
+            CSR_CAT_ALU_LO,
+              CSR_CAT_ALU_HI,
+              CSR_CAT_MUL_LO,
+              CSR_CAT_MUL_HI,
+              CSR_CAT_MULH_LO,
+              CSR_CAT_MULH_HI,
+              CSR_CAT_DIV_LO,
+              CSR_CAT_DIV_HI,
+              CSR_CAT_MEM_LO,
+              CSR_CAT_MEM_HI,
+              CSR_CAT_CTRL_LO,
+              CSR_CAT_CTRL_HI,
               CSR_CAT_FLOAT_LO,
-              CSR_CAT_FLOAT_HI :
+              CSR_CAT_FLOAT_HI,
+              CSR_CAT_DIVCYC_LO,
+              CSR_CAT_DIVCYC_HI :
                 csr_status_o = 1'b1;
 
             // PMP register access

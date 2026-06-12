@@ -246,6 +246,7 @@ module cv32e40p_id_stage
     output logic mhpmevent_imiss_o,
     output logic mhpmevent_ld_stall_o,
     output logic mhpmevent_pipe_stall_o,
+    output logic mhpmevent_system_o,
 
     input logic        perf_imiss_i,
     input logic [31:0] mcounteren_i
@@ -1626,6 +1627,7 @@ module cv32e40p_id_stage
       mhpmevent_imiss_o        <= 1'b0;
       mhpmevent_ld_stall_o     <= 1'b0;
       mhpmevent_pipe_stall_o   <= 1'b0;
+      mhpmevent_system_o       <= 1'b0;
     end else begin
       // Helper signal
       id_valid_q <= id_valid_o;
@@ -1636,6 +1638,11 @@ module cv32e40p_id_stage
       mhpmevent_jump_o           <= minstret && ((ctrl_transfer_insn_in_id == BRANCH_JAL) || (ctrl_transfer_insn_in_id == BRANCH_JALR));
       mhpmevent_branch_o <= minstret && (ctrl_transfer_insn_in_id == BRANCH_COND);
       mhpmevent_compressed_o <= minstret && is_compressed_i;
+      // Instrucciones de sistema que pasan minstret pero no deben contarse en
+      // el clasificador (el decoder las deja con alu_en=1/ALU_SLTU por default)
+      mhpmevent_system_o <= minstret && (mret_insn_dec || uret_insn_dec ||
+                                         dret_insn_dec || wfi_insn_dec ||
+                                         fencei_insn_dec);
       // EX stage count
       mhpmevent_branch_taken_o <= mhpmevent_branch_o && branch_decision_i;
       // IF stage count
