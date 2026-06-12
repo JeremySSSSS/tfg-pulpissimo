@@ -34,7 +34,7 @@ La hipótesis del TFG es que esta estimación alcanza un error relativo medio in
 | `Documento TFG/` | Informe final (tesis) en desarrollo: plantilla con capítulos de implementación, resultados y conclusiones en esqueleto | — |
 | `DOCS/` | Material de referencia: datasheets, papers, esquemáticos/PCB del medidor y figuras usadas por el documento | — |
 | `Circuito de Potencia/` | Circuito de medición INA240A1 + ADS1115 (esquemáticos, PCB, firmware de adquisición) — en preparación | — |
-| `TTGO LORA32/` | Código y documentación de la LilyGO TTGO LoRa32 (ESP32) para adquisición y registro — en preparación | — |
+| `TTGO LORA32/` | Documentación y sketches de la LilyGO TTGO LoRa32 (ESP32): guía de programación, OLED, lectura ADS1115 y pruebas de GPIO | — |
 
 La historia de git separa la base de los cambios propios: el **commit inicial** es el
 árbol upstream sin modificar de ambos proyectos, y cada commit posterior agrupa un
