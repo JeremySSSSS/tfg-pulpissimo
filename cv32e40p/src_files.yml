@@ -55,6 +55,7 @@ cv32e40p:
     ./rtl/cv32e40p_obi_interface.sv,
     ./rtl/cv32e40p_aligner.sv,
     ./rtl/cv32e40p_sleep_unit.sv,
+    ./rtl/cv32e40p_insn_classifier.sv,
     ./rtl/cv32e40p_core.sv,
     ./rtl/cv32e40p_apu_disp.sv,
     ./rtl/cv32e40p_fifo.sv

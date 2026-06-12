@@ -1,20 +1,17 @@
-TAGS
-*.swp
-*~
-*.o
-*.log
-*.vcd
-*.xml
-*.dbg
-*.wlf
+# Artefactos de compilación de firmware
 *.elf
+*.dis
+*.o
+*.bin
 *.hex
 *.map
-*.out
-*.json
-.build-rtl
-.lib-rtl
-.opt-rtl
-/build
-/Bender.lock
-/Bender.local
+# Logs y journals de Vivado/sim
+*.jou
+*.log
+*.bit
+*.str
+.Xil/
+# Bender
+.bender/
+*.swp
+*.swo

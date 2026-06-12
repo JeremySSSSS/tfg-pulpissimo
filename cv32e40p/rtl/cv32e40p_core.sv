@@ -246,7 +246,10 @@ module cv32e40p_core
   csr_num_e           csr_addr;
   csr_num_e           csr_addr_int;
   logic        [31:0] csr_rdata;
+  logic        [31:0] csr_rdata_cs;
   logic        [31:0] csr_wdata;
+  logic               cat_csr_hit;
+  logic        [31:0] cat_csr_rdata;
   PrivLvl_t           current_priv_lvl;
 
   // Data Memory Control:  From ID stage (id-ex pipe) <--> load store unit
@@ -958,7 +961,7 @@ module cv32e40p_core
       .csr_addr_i      (csr_addr),
       .csr_wdata_i     (csr_wdata),
       .csr_op_i        (csr_op),
-      .csr_rdata_o     (csr_rdata),
+      .csr_rdata_o     (csr_rdata_cs),
 
       .frm_o      (frm_csr),
       .fflags_i   (fflags_csr),
@@ -1033,6 +1036,30 @@ module cv32e40p_core
       .apu_dep_i               (perf_apu_dep),
       .apu_wb_i                (perf_apu_wb)
   );
+
+  cv32e40p_insn_classifier insn_classifier_i (
+      .clk_i         (clk),
+      .rst_ni        (rst_ni),
+
+      .retire_i      (mhpmevent_minstret),
+      .load_i        (mhpmevent_load),
+      .store_i       (mhpmevent_store),
+      .jump_i        (mhpmevent_jump),
+      .branch_i      (mhpmevent_branch),
+      .alu_en_i      (alu_en_ex),
+      .alu_operator_i(alu_operator_ex),
+      .mult_en_i     (mult_en_ex),
+      .apu_en_i      (apu_en_ex),
+      .csr_access_i  (csr_access_ex),
+
+      .csr_addr_i    (csr_addr),
+      .csr_op_i      (csr_op),
+      .csr_wdata_i   (csr_wdata),
+      .csr_hit_o     (cat_csr_hit),
+      .csr_rdata_o   (cat_csr_rdata)
+  );
+
+  assign csr_rdata = cat_csr_hit ? cat_csr_rdata : csr_rdata_cs;
 
   //  CSR access
   assign csr_addr     = csr_addr_int;

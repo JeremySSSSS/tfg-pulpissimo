@@ -283,6 +283,20 @@ package cv32e40p_pkg;
     // Privilege
     CSR_PRIVLV = 12'hCC1,  // Custom CSR. Privilege Level
 
+    // Instruction-category counters
+    CSR_CAT_ARITH_LO  = 12'hBC0,
+    CSR_CAT_ARITH_HI  = 12'hBC1,
+    CSR_CAT_LOGIC_LO  = 12'hBC2,
+    CSR_CAT_LOGIC_HI  = 12'hBC3,
+    CSR_CAT_MEMORY_LO = 12'hBC4,
+    CSR_CAT_MEMORY_HI = 12'hBC5,
+    CSR_CAT_BRANCH_LO = 12'hBC6,
+    CSR_CAT_BRANCH_HI = 12'hBC7,
+    CSR_CAT_JUMP_LO   = 12'hBC8,
+    CSR_CAT_JUMP_HI   = 12'hBC9,
+    CSR_CAT_FLOAT_LO  = 12'hBCA,
+    CSR_CAT_FLOAT_HI  = 12'hBCB,
+
     ///////////////////////////////////////////////////////
     // Machine CSRs
     ///////////////////////////////////////////////////////
