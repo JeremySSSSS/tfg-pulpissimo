@@ -34,6 +34,27 @@ PULP. PASS/FAIL por código de salida.
 | Test | Cubre |
 |------|-------|
 | `clasif_smoke.c` | Las 7 categorías con conteos conocidos, branches tomados (3, con instrucción anulada que no debe contarse) y no tomados (2), filtros csr (2 csrr mcycle) y system (2 fence), DIV_CYC con operandos variados |
+| `loop_<cat>.S` + `loop_main.c` | Bucles dominados por categoría (64 instrucciones objetivo + addi/bnez por iteración, patrón de los dominated_loops): `LOOP=alu\|mul\|mulh\|div\|mem\|ctrl\|float ./run_clasif_v2_xsim.sh`. Sin GPIO: versión de simulación; la envoltura con sync GPIO queda para la FPGA |
+
+Resultados de referencia de los bucles (2026-06-11, ITERS=8, todos PASS):
+
+| LOOP | Dominante | Overhead | Nota |
+|------|-----------|----------|------|
+| alu  | alu=529 | ctrl=9 | dominancia 98.3 % |
+| mul  | mul=512 | alu=17 ctrl=9 | 95.2 % |
+| mulh | mulh=512 | alu=17 ctrl=9 | 95.2 % |
+| div  | div=512 | alu=15 ctrl=9 | divcyc según operandos ↓ |
+| mem  | mem=512 | alu=15 ctrl=9 | 95.5 % |
+| ctrl | ctrl=521 | alu=15 | 97.2 % |
+
+**Ensayo de constancia de p_div** (DIV_CYC ciclo-exacto vs trace en los tres):
+`DIVOPS=min` → 4.0 ciclos/div · default (aleatorios) → 23.0 · `DIVOPS=max` →
+34.0. Rango de 8.5×: la justificación medida del modelo híbrido (un e_div por
+instrucción no puede representar esto; p_div por ciclo sí).
+
+Los `.S` usan `.option norvc` (instrucciones de 4 bytes deterministas).
+`loop_float` requiere elaborar el tb con FPU=1 (pendiente); en FPGA la FPU
+está confirmada.
 
 Resultado de referencia (2026-06-11, primer PASS):
 `alu=12 mul=5 mulh=7 div=6 mem=8 ctrl=5 float=0 divcyc=150` — golden

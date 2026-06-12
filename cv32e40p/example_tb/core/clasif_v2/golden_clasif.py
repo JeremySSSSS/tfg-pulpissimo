@@ -17,11 +17,13 @@ import re
 import sys
 import glob
 
+# Los mnemonicos se normalizan quitando el prefijo "c." (el tracer imprime
+# c.bne, c.jal, c.lwsp, ... para las comprimidas)
 MEM = {"lw", "lh", "lhu", "lb", "lbu", "sw", "sh", "sb", "flw", "fsw",
-       "c.lw", "c.sw", "c.lwsp", "c.swsp"}
-BRANCH = {"beq", "bne", "blt", "bge", "bltu", "bgeu",
-          "c.beqz", "c.bnez"}
-JUMP = {"jal", "jalr", "c.j", "c.jal", "c.jr", "c.jalr"}
+       "lwsp", "swsp"}
+BRANCH = {"beq", "bne", "blt", "bge", "bltu", "bgeu", "beqz", "bnez",
+          "blez", "bgez", "bltz", "bgtz"}
+JUMP = {"jal", "jalr", "j", "jr", "ret"}
 DIV = {"div", "divu", "rem", "remu"}
 MULH = {"mulh", "mulhsu", "mulhu"}
 MUL = {"mul"}
@@ -88,7 +90,8 @@ def classify(rows, start, end):
                csr=0, system=0, unknown=0)
     div_cycle_est = 0
     window = rows[start:end]
-    for k, (cyc, pc, ihex, mnem) in enumerate(window):
+    for k, (cyc, pc, ihex, raw_mnem) in enumerate(window):
+        mnem = raw_mnem[2:] if raw_mnem.startswith("c.") else raw_mnem
         is_csr, _, _ = is_csr_insn(ihex)
         if is_csr or mnem.startswith("csr"):
             cnt["csr"] += 1

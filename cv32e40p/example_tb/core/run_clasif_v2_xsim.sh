@@ -12,7 +12,17 @@ CORE_ROOT="$(cd ../.. && pwd)"
 DESIGN_RTL_DIR="${CORE_ROOT}/rtl"
 FPNEW_DIR=${FPNEW_DIR:-$(ls -d /home/jjsotoch/pulp/pulpissimo/.bender/git/checkouts/fpnew-*/src 2>/dev/null | head -1)}
 CF_MATH=$(find /home/jjsotoch/pulp/pulpissimo/.bender/git/checkouts -name cf_math_pkg.sv 2>/dev/null | head -1)
+# Modos:
+#   ./run_clasif_v2_xsim.sh                  test dirigido (clasif_smoke)
+#   LOOP=alu|mul|mulh|div|mem|ctrl|float     bucle dominado de esa categoría
+#   DIVOPS=min|max                           operandos de div (default: aleatorios)
+#   ITERS=n                                  iteraciones del bucle (default 8)
+#   GUI=1                                    ondas (firmware termina en wfi)
+#   SKIPRTL=1                                no recompilar el RTL (reusar snapshot)
 TEST=${TEST:-clasif_v2/clasif_smoke}
+SRCS="${TEST}.c"
+MARCH="rv32imc"
+ABIFLAGS=""
 
 # En GUI el firmware termina en wfi (core dormido, contadores congelados):
 # basta una simulación corta. En batch corre completo (printf + golden).
@@ -24,20 +34,39 @@ else
   EXTRA_CFLAGS=""
 fi
 
+if [ -n "${LOOP:-}" ]; then
+  TEST="clasif_v2/loop_${LOOP}"
+  SRCS="clasif_v2/loop_main.c clasif_v2/loop_${LOOP}.S"
+  EXTRA_CFLAGS="${EXTRA_CFLAGS} -DLOOP_$(echo "${LOOP}" | tr '[:lower:]' '[:upper:]')"
+  [ -n "${ITERS:-}" ] && EXTRA_CFLAGS="${EXTRA_CFLAGS} -DITERS=${ITERS}u"
+  case "${DIVOPS:-}" in
+    min) EXTRA_CFLAGS="${EXTRA_CFLAGS} -DDIV_MIN" ;;
+    max) EXTRA_CFLAGS="${EXTRA_CFLAGS} -DDIV_MAX" ;;
+  esac
+  if [ "${LOOP}" = "float" ]; then
+    MARCH="rv32imfc"
+    ABIFLAGS="-mabi=ilp32f"
+    echo "AVISO: loop_float requiere el tb elaborado con FPU=1 (pendiente)."
+  fi
+fi
+
 source "${VIVADO_SETTINGS}"
 
 GCC=$(ls "${RISCV}"/bin/riscv32-*-gcc | head -1)
 PREFIX="${GCC%gcc}"
 
-echo "== Compilando firmware ${TEST}.c =="
-"${GCC}" -march=rv32imc ${EXTRA_CFLAGS} -o "${TEST}.elf" -w -Os -g -nostdlib \
+echo "== Compilando firmware: ${SRCS} =="
+"${GCC}" -march=${MARCH} ${ABIFLAGS} ${EXTRA_CFLAGS} -o "${TEST}.elf" -w -Os -g -nostdlib \
   -T custom/link.ld -static \
-  custom/crt0.S "${TEST}.c" custom/syscalls.c custom/vectors.S \
+  custom/crt0.S ${SRCS} custom/syscalls.c custom/vectors.S \
   -I "${RISCV}"/riscv32-*-elf/include \
   -L "${RISCV}"/riscv32-*-elf/lib \
   -lc -lm -lgcc
 "${PREFIX}objcopy" -O verilog "${TEST}.elf" "${TEST}.hex"
 
+if [ "${SKIPRTL:-0}" = "1" ] && [ -d xsim.dir/tb_top_clasif ]; then
+  echo "== RTL: reusando snapshot existente (SKIPRTL=1) =="
+else
 echo "== Compilando RTL (con tracer) =="
 # cv32e40p_fpu_pkg.sv fue eliminado por el commit upstream 7a49867 pero el
 # flist upstream quedó sin actualizar; fpnew_pkg (externo) lo sustituye.
@@ -68,6 +97,7 @@ xvlog -sv -L uvm -d CV32E40P_TRACE_EXECUTION \
 echo "== Elaborando =="
 xelab tb_top -L uvm -debug typical -s tb_top_clasif > xelab_run.log 2>&1 \
   || { grep -E "ERROR" xelab_run.log | head -20; exit 1; }
+fi
 
 if [ "${GUI:-0}" = "1" ]; then
   echo "== Simulando (GUI) =="
