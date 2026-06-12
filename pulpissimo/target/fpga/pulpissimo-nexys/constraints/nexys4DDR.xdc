@@ -127,6 +127,9 @@ set_property -dict {PACKAGE_PIN D4 IOSTANDARD LVCMOS33} [get_ports pad_uart_tx]
 #set_property -dict {PACKAGE_PIN D3 IOSTANDARD LVCMOS33} [get_ports pad_uart_cts]
 #set_property -dict {PACKAGE_PIN E5 IOSTANDARD LVCMOS33} [get_ports pad_uart_rts]
 
+## ESP32 sync - PMOD JD1
+set_property -dict {PACKAGE_PIN H4 IOSTANDARD LVCMOS33} [get_ports pad_esp32_sync]
+
 ## LEDs
 set_property -dict {PACKAGE_PIN H17 IOSTANDARD LVCMOS33} [get_ports led0_o]
 set_property -dict {PACKAGE_PIN K15 IOSTANDARD LVCMOS33} [get_ports led1_o]

@@ -34,7 +34,7 @@ module xilinx_pulpissimo (
   //inout  wire pad_uart_cts,  //Not mapped, optional
   //inout  wire pad_uart_rts,  //Not mapped, optional
 
-  inout wire  led0_o, //Mapped to spim_csn1
+  inout wire  pad_esp32_sync, //io_08, salida hacia ESP32 (PMOD JD1 - H4)
   inout wire  led1_o, //Mapped to cam_pclk
   inout wire  led2_o, //Mapped to cam_hsync
   inout wire  led3_o, //Mapped to cam_data0
@@ -70,7 +70,7 @@ module xilinx_pulpissimo (
 
   inout wire  pad_jtag_tck,
   inout wire  pad_jtag_tdi,
-  input wire  pad_jtag_tdo,
+  inout wire  pad_jtag_tdo,
   inout wire  pad_jtag_tms
   //input wire  pad_jtag_trst
  );
@@ -174,7 +174,7 @@ module xilinx_pulpissimo (
       led3_o,         // io_11
       led2_o,         // io_10
       led1_o,         // io_09
-      led0_o,         // io_08
+      pad_esp32_sync, // io_08
       pad_spim_sdio3, // io_07
       pad_spim_sdio2, // io_06
       pad_spim_sdio1, // io_05
