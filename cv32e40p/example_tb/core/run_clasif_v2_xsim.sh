@@ -60,10 +60,20 @@ echo "== Elaborando =="
 xelab tb_top -L uvm -debug typical -s tb_top_clasif > xelab_run.log 2>&1 \
   || { grep -E "ERROR" xelab_run.log | head -20; exit 1; }
 
-echo "== Simulando =="
-xsim tb_top_clasif -R \
-  --testplusarg firmware="${TEST}.hex" \
-  --testplusarg maxcycles="${MAXCYCLES}" 2>&1 | tee sim_clasif.log
+if [ "${GUI:-0}" = "1" ]; then
+  echo "== Simulando (GUI) =="
+  # Abre el GUI de XSim; agregá las señales del clasificador con:
+  #   add_wave /tb_top/wrapper_i/ram_i/../insn_classifier_i/*  (o desde el árbol)
+  # y corré con: run all
+  xsim tb_top_clasif -gui \
+    --testplusarg firmware="${TEST}.hex" \
+    --testplusarg maxcycles="${MAXCYCLES}"
+else
+  echo "== Simulando =="
+  xsim tb_top_clasif -R \
+    --testplusarg firmware="${TEST}.hex" \
+    --testplusarg maxcycles="${MAXCYCLES}" 2>&1 | tee sim_clasif.log
 
-echo "== Modelo dorado =="
-python3 clasif_v2/golden_clasif.py 'trace_core_*.log' sim_clasif.log
+  echo "== Modelo dorado =="
+  python3 clasif_v2/golden_clasif.py 'trace_core_*.log' sim_clasif.log
+fi
