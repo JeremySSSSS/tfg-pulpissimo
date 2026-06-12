@@ -16,19 +16,15 @@ TEST=clasif_v2/otro ./run_clasif_v2_xsim.sh   # correr otro test
 
 En modo GUI el flujo es manual, como siempre: agregar las señales de
 `insn_classifier_i` al waveform desde el árbol de instancias
-(`tb_top > wrapper_i > wrapper_i > core_i`) y darle `run all`.
-`break_clasif.tcl` solo arma un **breakpoint** (`div=6 && mem=8 && ctrl=5`
-sobre registros) que pausa la simulación al final de la región medida: ahí
-los contadores valen `alu=12 mul=5 mulh=7 div=6 mem=8 ctrl=5 float=0
-divcyc=150`. Si continuás con `run all`, los contadores siguen creciendo
-(volcado de resultados + printf) — es normal; los valores válidos son los del
-punto de parada. El careo con el modelo dorado solo corre en modo batch.
-
-Notas de `add_condition` en XSim 2022.1 (aprendidas a golpes): los literales
-de las condiciones se interpretan en BINARIO (escribir 6 como `110`), no
-acepta `-label` ni literales estilo Verilog (`2'b00`), las señales
-combinacionales producen disparos falsos por glitches (usar registros), y en
-t=0 las X disparan cualquier condición (armar después de `run 100 ns`).
+(`tb_top > wrapper_i > wrapper_i > core_i`) y darle `run all`. En GUI el
+firmware se compila con `-DWAVES_HOLD`: tras leer los contadores ejecuta
+**`wfi`** (el mismo truco del viejo `category_counter_freeze.c`) — el core se
+duerme y los contadores quedan **congelados** en sus valores finales hasta el
+fin de la simulación. No hay que cazar ningún instante: en cualquier punto
+del tramo final del waveform se lee
+`alu=12 mul=5 mulh=7 div=6 mem=8 ctrl=5 float=0 divcyc=150`.
+(En este modo el programa no llega al printf, por eso el careo con el modelo
+dorado solo corre en modo batch, donde WAVES_HOLD no se define.)
 
 Requiere Vivado 2022.1 (XSim + UVM para el tracer) y la toolchain RISC-V
 PULP. PASS/FAIL por código de salida.

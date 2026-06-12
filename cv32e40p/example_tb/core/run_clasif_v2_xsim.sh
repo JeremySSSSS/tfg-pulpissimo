@@ -13,7 +13,16 @@ DESIGN_RTL_DIR="${CORE_ROOT}/rtl"
 FPNEW_DIR=${FPNEW_DIR:-$(ls -d /home/jjsotoch/pulp/pulpissimo/.bender/git/checkouts/fpnew-*/src 2>/dev/null | head -1)}
 CF_MATH=$(find /home/jjsotoch/pulp/pulpissimo/.bender/git/checkouts -name cf_math_pkg.sv 2>/dev/null | head -1)
 TEST=${TEST:-clasif_v2/clasif_smoke}
-MAXCYCLES=${MAXCYCLES:-400000}
+
+# En GUI el firmware termina en wfi (core dormido, contadores congelados):
+# basta una simulación corta. En batch corre completo (printf + golden).
+if [ "${GUI:-0}" = "1" ]; then
+  MAXCYCLES=${MAXCYCLES:-20000}
+  EXTRA_CFLAGS="-DWAVES_HOLD"
+else
+  MAXCYCLES=${MAXCYCLES:-400000}
+  EXTRA_CFLAGS=""
+fi
 
 source "${VIVADO_SETTINGS}"
 
@@ -21,7 +30,7 @@ GCC=$(ls "${RISCV}"/bin/riscv32-*-gcc | head -1)
 PREFIX="${GCC%gcc}"
 
 echo "== Compilando firmware ${TEST}.c =="
-"${GCC}" -march=rv32imc -o "${TEST}.elf" -w -Os -g -nostdlib \
+"${GCC}" -march=rv32imc ${EXTRA_CFLAGS} -o "${TEST}.elf" -w -Os -g -nostdlib \
   -T custom/link.ld -static \
   custom/crt0.S "${TEST}.c" custom/syscalls.c custom/vectors.S \
   -I "${RISCV}"/riscv32-*-elf/include \
@@ -64,10 +73,10 @@ if [ "${GUI:-0}" = "1" ]; then
   echo "== Simulando (GUI) =="
   # GUI normal: agregá las señales de insn_classifier_i al waveform desde el
   # árbol de instancias (tb_top > wrapper_i > wrapper_i > core_i) y dale
-  # "run all". break_clasif.tcl solo arma un breakpoint que pausa la sim al
-  # final de la región medida (ahí los contadores valen 12/5/7/6/8/5/0/150).
+  # "run all". El firmware (compilado con WAVES_HOLD) ejecuta wfi tras leer
+  # los contadores: el core se duerme y los valores quedan congelados en
+  # 12/5/7/6/8/5/0/150 hasta el final — miralos donde sea del tramo final.
   xsim tb_top_clasif -gui \
-    --tclbatch clasif_v2/break_clasif.tcl \
     --testplusarg firmware="${TEST}.hex" \
     --testplusarg maxcycles="${MAXCYCLES}"
 else

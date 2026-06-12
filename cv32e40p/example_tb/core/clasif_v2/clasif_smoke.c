@@ -92,6 +92,13 @@ int main(void) {
       "csrr t5, 0xBCA\n"              // CTRL
       "csrr t6, 0xBCC\n"              // FLOAT
       "csrr a6, 0xBCE\n"              // DIVCYC
+#ifdef WAVES_HOLD
+      // Modo ondas (GUI): dormir el core aquí mismo, igual que el viejo
+      // category_counter_freeze.c. Nada más ejecuta: los contadores quedan
+      // congelados en sus valores finales hasta el fin de la simulación.
+      "wfi\n"
+      "9: j 9b\n"
+#endif
       "sw t0,  0(%[out])\n sw t1,  4(%[out])\n"
       "sw t2,  8(%[out])\n sw t3, 12(%[out])\n"
       "sw t4, 16(%[out])\n sw t5, 20(%[out])\n"
