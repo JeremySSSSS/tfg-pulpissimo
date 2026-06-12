@@ -1,0 +1,96 @@
+\chapter{Cronograma}
+\label{ch:cron}
+
+El cronograma cubre 17 semanas y sigue una secuencia simple: preparación, medición, implementación, análisis, validación y cierre. Las primeras semanas se usan para preparar el entorno, validar la cadena JTAG y comprobar la medición de potencia.
+
+Después se ejecuta el experimento preliminar con bucles dominados por categoría. Esa actividad no depende todavía del clasificador RTL, así que puede hacerse pronto.
+
+La etapa central corresponde al diseño del clasificador, su integración con los CSR del CV32E40P y la síntesis del SoC PULPissimo modificado sobre la FPGA Nexys~A7-100T. Luego se hace la caracterización por regresión de histogramas y se construye el flujo de análisis.
+
+Las semanas finales se reservan para validar el modelo con cargas mixtas, comparar la estimación contra la medición física de referencia y cerrar la documentación. La semana 17 queda como margen ante atrasos de síntesis o temporización.
+
+\definecolor{ganttPrep}{RGB}{198,224,255}
+\definecolor{ganttMeas}{RGB}{190,230,210}
+\definecolor{ganttRTL}{RGB}{255,224,178}
+\definecolor{ganttAna}{RGB}{215,205,245}
+\definecolor{ganttVal}{RGB}{255,205,210}
+\definecolor{ganttDoc}{RGB}{220,220,220}
+\definecolor{ganttHead}{RGB}{235,235,235}
+
+\newcommand{\prep}{\cellcolor{ganttPrep}}
+\newcommand{\meas}{\cellcolor{ganttMeas}}
+\newcommand{\rtl}{\cellcolor{ganttRTL}}
+\newcommand{\ana}{\cellcolor{ganttAna}}
+\newcommand{\val}{\cellcolor{ganttVal}}
+\newcommand{\doc}{\cellcolor{ganttDoc}}
+\newcommand{\legendbox}[1]{\cellcolor{#1}\hspace{1.2em}}
+
+\begin{table}[!htbp]
+\caption{Cronograma general de ejecución del proyecto.}
+\label{tab:cronograma}
+\centering
+\hfill
+\scriptsize
+\begin{tabular}{@{}ll@{\hspace{1em}}ll@{\hspace{1em}}ll@{}}
+\legendbox{ganttPrep} & Preparación &
+\legendbox{ganttMeas} & Medición &
+\legendbox{ganttRTL} & Implementación \\
+\legendbox{ganttAna} & Análisis &
+\legendbox{ganttVal} & Validación &
+\legendbox{ganttDoc} & Documentación \\
+\end{tabular}
+\normalsize
+\vspace{0.4em}
+
+\begingroup
+\renewcommand{\arraystretch}{1.25}
+\setlength{\arrayrulewidth}{1.1pt}
+\setlength{\tabcolsep}{3pt}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|p{5.0cm}|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|}
+\hline
+\rowcolor{ganttHead}
+\textbf{Actividad} &
+\textbf{1} & \textbf{2} & \textbf{3} & \textbf{4} &
+\textbf{5} & \textbf{6} & \textbf{7} & \textbf{8} &
+\textbf{9} & \textbf{10} & \textbf{11} & \textbf{12} &
+\textbf{13} & \textbf{14} & \textbf{15} & \textbf{16} &
+\textbf{17} \\
+\hline
+Revisión técnica y preparación del entorno &
+\prep & \prep &  &  &  &  &  &  &  &  &  &  &  &  &  &  &  \\
+\hline
+Diseño y verificación del circuito de medición &
+ & \meas & \meas & \meas &  &  &  &  &  &  &  &  &  &  &  &  &  \\
+\hline
+Experimento preliminar con bucles dominados por categoría &
+ &  &  & \meas & \meas &  &  &  &  &  &  &  &  &  &  &  &  \\
+\hline
+Caracterización por bucles dominados por categoría &
+ &  &  &  & \meas & \meas &  &  &  &  &  &  &  &  &  &  &  \\
+\hline
+Diseño RTL del clasificador de instrucciones &
+ &  &  &  & \rtl & \rtl & \rtl &  &  &  &  &  &  &  &  &  &  \\
+\hline
+Integración de CSR y firmware de prueba &
+ &  &  &  &  & \rtl & \rtl & \rtl &  &  &  &  &  &  &  &  &  \\
+\hline
+Síntesis e implementación en FPGA &
+ &  &  &  &  &  &  & \rtl & \rtl &  &  &  &  &  &  &  &  \\
+\hline
+Caracterización por regresión de histogramas &
+ &  &  &  &  &  &  &  & \ana & \ana & \ana &  &  &  &  &  &  \\
+\hline
+Pipeline de análisis y visualización &
+ &  &  &  &  &  &  &  &  & \ana & \ana & \ana & \ana &  &  &  &  \\
+\hline
+Validación con cargas mixtas &
+ &  &  &  &  &  &  &  &  &  &  & \val & \val & \val &  &  &  \\
+\hline
+Redacción, revisión y entrega final &
+ &  &  &  &  &  &  &  &  &  & \doc & \doc & \doc & \doc & \doc & \doc &  \\
+\hline
+\end{tabular}%
+}
+\endgroup
+\end{table}

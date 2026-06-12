@@ -1,0 +1,64 @@
+\chapter{Resultados y análisis}
+\label{ch:resultados}
+
+% =======================================================================
+% TODO GENERAL: este capítulo se llena con la campaña experimental.
+% El protocolo base está en experimento.tex del anteproyecto (rutinas
+% dominadas, ventanas de 10-60 s, criterio de viabilidad); aquí se reporta
+% lo ejecutado y sus números. La macro \figpend{...} de macros.tex sirve
+% como marcador de figuras pendientes.
+% =======================================================================
+
+% -----------------------------------------------------------------------
+\section{Verificación funcional del clasificador}
+\label{sec:res_verificacion}
+
+% TODO:
+% - Simulación (XSim): conteos del programa de prueba vs conteo manual
+%   (ya existe el resultado del freeze test con filtro CSR: ARITH=6,
+%   LOGIC=2, MEMORY=4, BRANCH=1, JUMP=1, FLOAT=0 — rehacer con el esquema
+%   nuevo de categorías).
+% - En hardware: lectura de los 12 CSR vía JTAG/GDB tras rutinas con
+%   conteos conocidos; verificación de reseteo por escritura.
+% - Costo en recursos FPGA del clasificador (LUTs/FFs, delta vs SoC base)
+%   y efecto en timing — sale del reporte de Vivado.
+
+% -----------------------------------------------------------------------
+\section{Caracterización de coeficientes energéticos}
+\label{sec:res_caracterizacion}
+
+\subsection{Verificación de corriente máxima y configuración del PGA}
+% TODO: pasada exploratoria con PGA ±4.096 V; decidir si la caracterización
+% fina usa ±2.048 V (tabla de decisión del anteproyecto).
+
+\subsection{Método de bucles dominados por categoría}
+% TODO: por categoría: potencia promedio, repeticiones, dispersión,
+% e_i = P*T/n_i. Tabla de coeficientes + barras con incertidumbre.
+% Restar/documentar el baseline estático (p. ej. wfi).
+
+\subsection{Método de regresión por histograma}
+% TODO: M programas mixtos, matriz de conteos, mínimos cuadrados.
+% Reportar R^2 y número de condición de la matriz (compromiso del
+% anteproyecto, marco_teo §2.2.1). Tabla comparativa M1 vs M2.
+
+% -----------------------------------------------------------------------
+\section{Validación del modelo}
+\label{sec:res_validacion}
+
+% TODO: cargas mixtas NO usadas en caracterización; P_est vs P_medida,
+% error relativo por carga y error relativo medio. Contraste explícito
+% contra la hipótesis (< 10 %). Incluir casos favorables y desfavorables.
+
+% -----------------------------------------------------------------------
+\section{Discusión}
+\label{sec:res_discusion}
+
+% TODO: fuentes de error (agrupación intra-categoría, potencia estática,
+% efectos de contexto/forwarding, resolución de la cadena de medición),
+% comparación con la literatura (Fang, EfiMon, Jiménez) y límites de
+% validez de los coeficientes (plataforma/frecuencia/bitstream).
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "main"
+%%% End:

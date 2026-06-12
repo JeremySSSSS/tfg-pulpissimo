@@ -1,0 +1,119 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Informe de Trabajo Final de Graduación (tesis)
+% Escuela de Ingeniería Electrónica
+% Instituto Tecnológico de Costa Rica — Sede San Carlos
+%
+% Basado en la plantilla de P. Alvarado (palvarado@ietec.org)
+% Derivado del anteproyecto (tfg_doc/); ver notas TODO en cada capítulo.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\documentclass[12pt,oneside,letterpaper]{book}
+
+\usepackage[utf8]{inputenc}
+\usepackage{ifthen}
+
+% --------------------------------------------------------------------------
+% BOOK MODE
+\newboolean{bookmode}
+\setboolean{bookmode}{true}
+
+% DRAFT MODE
+\newboolean{draftmode}
+\setboolean{draftmode}{false}  % cambiar a false para versión final
+% --------------------------------------------------------------------------
+
+% Datos del documento
+\newcommand{\scriptAuthor}{Jeremy Jesús Soto Chacón}
+\newcommand{\scriptAuthorShort}{J.~Soto}
+\newcommand{\scriptAuthorID}{2021050722}
+
+\newcommand{\scriptTitle}{Módulo Hardware para Estimación de Consumo Energético
+por Categoría de Instrucción en Arquitecturas RISC-V}
+
+\newcommand{\scriptKeywords}{RISC-V, CV32E40P, consumo energético,
+clasificador de instrucciones, FPGA, PULPissimo, bare-metal,
+medición de potencia, CSR}
+
+\newcommand{\scriptType}{Informe de Trabajo Final de Graduación para optar por
+el título de Ingeniero en Electrónica con el grado académico de Licenciatura}
+
+\newcommand{\boxeditorial}{}
+
+\newcommand{\pdfAuthor}{\scriptAuthor}
+\newcommand{\pdfTitle}{\scriptTitle}
+\newcommand{\pdfKeywords}{\scriptKeywords}
+\newcommand{\pdfSubject}{\scriptType}
+
+% --------------------------------------------------------------------------
+\input{macros}
+
+\setAsesor{Luis G. León Vega}
+\setLectorI{Por definir}    % completar con nombre del lector I
+\setLectorII{Por definir}   % completar con nombre del lector II
+
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric,arrows.meta,positioning,fit,backgrounds,calc}
+\allowdisplaybreaks[3]
+% --------------------------------------------------------------------------
+
+\begin{document}
+  \graphicspath{{./}{./fig/}}
+
+  \pagenumbering{alph}
+  \renewcommand{\tablename}{Tabla}
+  \renewcommand{\listtablename}{\'Indice de tablas}
+  \renewcommand{\examplesolution}{Solución}
+  \pagestyle{empty}
+
+  \include{titlepage}
+  \include{disclaimer}
+  %\include{tribunal}  % Acta de Aprobación
+  %\include{acta}      % Acta de Evaluación
+  \include{resumen}
+  \include{dedicatoria}
+  \include{agradecimientos}
+
+  %--------------------------------------------------------------------------
+  \frontmatter
+  %--------------------------------------------------------------------------
+  \pagestyle{fancy}
+
+  \pdfbookmark[1]{Indice General}{Indice General}
+  \parskip0ex
+
+  \tableofcontents
+  \listoffigures
+  \listoftables
+
+  %\include{notation}
+  \include{glosario}
+
+  \parskip1.3ex
+
+  %--------------------------------------------------------------------------
+  \mainmatter
+  %--------------------------------------------------------------------------
+  \graphicspath{{./}{./fig/}}
+
+  \include{intro}          % TODO: actualizar a voz ejecutada; añadir síntesis de resultados al final
+  \include{marco_teo}      % se reutiliza casi directo del anteproyecto
+  \include{objetivos}      % TODO: hipótesis/OE se mantienen; quitar tareas y cronograma de propuesta
+  \include{implementacion} % NUEVO: diseño e implementación (sustituye a solucion.tex)
+  \include{resultados}     % NUEVO: resultados y análisis
+  \include{conclusiones}   % NUEVO: conclusiones y recomendaciones
+  % Material del anteproyecto conservado como cantera de texto (no se incluyen):
+  % \include{solucion}     % base para implementacion.tex
+  % \include{experimento}  % base para la sección de protocolo en resultados.tex
+  % \include{cronograma}   % no va en el informe final
+
+  %--------------------------------------------------------------------------
+  \bibliographystyle{sty/plainurl}
+  \bibliography{referencias}
+  %--------------------------------------------------------------------------
+
+  %--------------------------------------------------------------------------
+  \appendix
+  %--------------------------------------------------------------------------
+  % \include{apendice}
+
+\end{document}

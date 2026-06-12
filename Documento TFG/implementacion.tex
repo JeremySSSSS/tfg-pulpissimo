@@ -1,0 +1,115 @@
+\chapter{Diseño e implementación}
+\label{ch:implementacion}
+
+% =======================================================================
+% TODO GENERAL: este capítulo sustituye a solucion.tex del anteproyecto.
+% Gran parte del texto de solucion.tex se reutiliza convertido a voz
+% ejecutada (pasado/presente). Lo NUEVO respecto al anteproyecto es el
+% esquema de categorías por firma de energía (decisión 2026-06-11), que
+% aún NO está implementado en RTL: al implementarlo, documentar aquí la
+% versión final.
+% =======================================================================
+
+% TODO: párrafo introductorio — los tres componentes (medición, clasificador,
+% análisis), reusar apertura de solucion.tex con la figura de arquitectura general.
+
+% -----------------------------------------------------------------------
+\section{Definición de categorías por firma de energía}
+\label{sec:categorias_energia}
+
+% TODO: esta sección es NUEVA y es el aporte metodológico central de la
+% tesis frente al anteproyecto (que usaba Arithmetic/Logic/Memory/Branch/
+% Jump/Float por tipo de operación). Documentar:
+%
+% 1. Principio: las fronteras entre categorías se justifican A PRIORI desde
+%    la microarquitectura del RTL (unidad funcional x latencia), no desde
+%    la semántica de la instrucción.
+% 2. Latencias reales del CV32E40P (verificadas en el RTL):
+%    - ALU: 1 ciclo; mul (MUL_MAC32): 1 ciclo
+%    - mulh/mulhu/mulhsu: ~4 ciclos (FSM en cv32e40p_mult.sv)
+%    - div/divu/rem/remu: variable hasta ~32 ciclos, dependiente de datos
+%      (cv32e40p_alu_div.sv)
+%    - branch resuelto en EX; flush solo si es tomado (branch_taken_ex)
+% 3. Categorías resultantes:
+%    (1) ALU simple: aritmética/lógica/shifts/compares/mul de 1 ciclo
+%        + branches NO tomados (equivalen a un compare en EX)
+%    (2) Multiplicación larga: mulh/mulhu/mulhsu
+%    (3) División: div/divu/rem/remu
+%    (4) Memoria: loads/stores incluidos flw/fsw (activan data_req)
+%    (5) Control: jal/jalr + branches TOMADOS (mhpmevent_jump ||
+%        mhpmevent_branch_taken; el flush/refetch es un mecanismo único)
+%    (6) Flotante: cómputo FPU
+% 4. Instrucciones NO contadas (filtro): csrr/csrw, fence/fence.i, ecall,
+%    ebreak, mret, wfi --> sum(n_i) <= minstret. Justificar: el decoder
+%    deja alu_en=1/ALU_SLTU por defecto y sin filtro contaminarían la
+%    categoría ALU simple.
+% 5. Si la caracterización muestra que mulh es despreciable en código real,
+%    se pliega a ALU simple y quedan 5 categorías (documentar la decisión).
+
+% -----------------------------------------------------------------------
+\section{Módulo clasificador de instrucciones}
+\label{sec:clasificador_impl}
+
+% TODO: reusar de solucion.tex §3.2 (concepto, señales del pipeline) en voz
+% ejecutada, actualizado al esquema nuevo:
+% - entradas: mhpmevent_minstret (retire), mhpmevent_load/store,
+%   mhpmevent_jump, mhpmevent_branch_taken (NUEVA), mult_en + selector
+%   mulh, señal de división, apu_en, csr_access_ex, system_insn (NUEVA)
+% - tabla categoría -> condición de detección (rehacer tab:senales_clas)
+% - contadores de 64 bits, lógica de incremento
+
+\subsection{Interfaz CSR}
+\label{sec:csr_impl}
+
+% TODO: 12 CSR en pares LO/HI, rango 0xBC0--0xBCB (custom RW de modo
+% máquina). Tabla de mapeo. Lectura (HI<<32)|LO y reseteo por escritura.
+% Si el esquema nuevo cambia el mapeo, actualizar también COMANDOS_JTAG.
+
+\subsection{Integración en el núcleo}
+\label{sec:integracion_impl}
+
+% TODO: reusar solucion.tex §3.2.3: instancia en cv32e40p_core.sv,
+% multiplexor de lectura csr_rdata, decoder aceptando los CSR custom,
+% manifiestos (Bender.yml, flist, src_files.yml).
+
+% -----------------------------------------------------------------------
+\section{Plataforma FPGA}
+\label{sec:plataforma_impl}
+
+% TODO: nueva sección (en el anteproyecto estaba disperso). Documentar lo
+% ya hecho: target pulpissimo-nexys, pad_esp32_sync (io_08 -> H4/PMOD JD1),
+% fix de dirección de pad_jtag_tdo, JTAG por PMOD JA con FT232H,
+% constraints de temporización JTAG, síntesis no incremental
+% (fix Synth 8-6885), frecuencia de operación verificada (10 MHz).
+
+% -----------------------------------------------------------------------
+\section{Circuito de medición de potencia}
+\label{sec:medicion_impl}
+
+% TODO: reusar solucion.tex §3.1 completo en voz ejecutada (INA240A1 +
+% shunt 100 mOhm high-side, ADS1115, ESP32, resolución 156 uW, ventana por
+% GPIO de sincronización). Añadir fotos/esquemático del hardware REAL
+% construido y cualquier desviación respecto a lo propuesto.
+
+% -----------------------------------------------------------------------
+\section{Firmware de caracterización}
+\label{sec:firmware_impl}
+
+% TODO: bucles dominados por categoría (~97% dominancia, 64+2 instrucciones
+% por iteración), delimitación por GPIO8, terminación con ebreak,
+% frequency_probe. Actualizar las rutinas al esquema de categorías nuevo
+% (p. ej. rutinas separadas para división y mulh; branches tomados vs no
+% tomados).
+
+% -----------------------------------------------------------------------
+\section{Software de análisis y operación}
+\label{sec:software_impl}
+
+% TODO: reusar solucion.tex §3.3 en voz ejecutada: calibración (M1/M2),
+% validación y modo de operación sin instrumentación. Documentar los
+% scripts reales y el formato de coefficients.json.
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "main"
+%%% End:

@@ -1,0 +1,106 @@
+\chapter{Metodología}
+\label{ch:met}
+
+% Por redactar — estructura pendiente de definir con el asesor.
+
+%% -----------------------------------------------------------------------
+%% TODO: Contenido trasladado desde el marco teórico.
+%% Descomentar y desarrollar en el siguiente entregable.
+%% -----------------------------------------------------------------------
+
+% \section{Diseño del módulo clasificador}
+%
+% El módulo \texttt{cv32e40p\_insn\_classifier.sv} se implementa como lógica
+% combinacional pura para la clasificación y lógica secuencial para los contadores.
+%
+% \subsection{Integración en el ID stage}
+%
+% El clasificador examina \texttt{opcode} como selector primario y \texttt{funct3}
+% para distinguir variantes. Por ejemplo:
+% - opcode \texttt{0110011} → instrucciones registro-registro (tipo R)
+%   - funct7=0000000 → aritmética (add, sll, slt, sltu, xor, srl, or, and)
+%   - funct7=0100000 → aritmética (sub, sra)
+% - opcode \texttt{0000011} → todos los loads (independiente de funct3)
+% - opcode \texttt{1100011} → todos los branches
+%
+% El módulo produce seis señales de incremento de un bit, una por categoría,
+% que habilitan el contador correspondiente en cada ciclo activo.
+%
+% \subsection{Modificación de cv32e40p\_cs\_registers.sv}
+%
+% La integración requiere agregar seis casos al multiplexor de lectura del
+% banco de CSRs en \texttt{cv32e40p\_cs\_registers.sv}, retornando el valor
+% del contador correspondiente cuando se accede a 0xBC0--0xBCB.
+
+% -----------------------------------------------------------------------
+
+% \section{Circuito de medición de corriente}
+%
+% \subsection{Topología high-side}
+%
+% Se adopta la topología high-side (shunt en la línea de +5V):
+% - Low-side descartado: el GND del FPGA quedaría a +85mV, cualquier cable
+%   externo (USB, JTAG, clip GND del osciloscopio) cortocircuitaría el shunt.
+% - High-side: GND del FPGA permanece a 0V, compartido con todos los equipos.
+%
+% Con R_shunt = 1 Ohm y corriente típica de 85mA:
+% - Caída en shunt = 85mV (1.7% de 5V) — dentro del margen ±5% de la Nexys A7
+% - Jumper JP3 en posición EXT para que toda la corriente pase por el shunt
+%
+% \subsection{Configuración del INA240}
+%
+% INA240A1: G = 20 V/V
+% IN+ al nodo de 5V (antes del shunt), IN- al nodo de la FPGA (después del shunt)
+% → Vout = G × I × R_shunt = 20 × 85mA × 0.1Ohm = +170mV
+% Alimentación: 3.3V, REF conectado a GND
+%
+% Resultados esperados:
+% V(IN+)=5V, V(IN-)=4.9915V, V(vout)=+170mV, I=85mA
+
+% -----------------------------------------------------------------------
+
+% \section{Metodología de caracterización}
+%
+% \subsection{Bucle de instrucciones}
+%
+% Para cada categoría i:
+% - Bucle interno (ensamblador): 1000-10000 iteraciones de una sola instrucción
+% - Bucle externo (C): mantiene ejecución indefinida hasta registrar la medición
+%
+% \subsection{Estabilización térmica}
+%
+% registrar V_out en el osciloscopio. Fang [2021] observó <1% de diferencia
+% entre 5 y 10 minutos de espera.
+%
+% \subsection{Cálculo del coeficiente}
+%
+% c_i = (V_out,i / (G * R_shunt)) * V_DD
+%      = (V_out,i / (10 * 1)) * 5   [mW/instrucción]
+%
+% Se repite para las 6 categorías → vector c = [c0, c1, ..., c5]
+
+% -----------------------------------------------------------------------
+
+% \section{Análisis de datos en Python}
+%
+% line = port.readline().decode().strip()
+% n = list(map(int, line.split(',')))  # n[0]..n[5]
+%
+% \subsection{Cálculo de potencia estimada}
+%
+% import numpy as np
+% P_est = np.dot(c, n)   # P = sum(c_i * n_i)
+%
+% \subsection{Histogramas por categoría}
+%
+% import matplotlib.pyplot as plt
+% categorias = ['Arit','Log','Mem','Branch','Jump','FP']
+% plt.bar(categorias, n)
+% plt.ylabel('Instrucciones ejecutadas')
+% plt.title('Perfil de instrucciones')
+% plt.show()
+%
+% \subsection{Validación del modelo}
+%
+% Error porcentual: epsilon = |P_est - P_real| / P_real * 100%
+% P_real se mide con el osciloscopio simultáneamente a la ejecución del programa.

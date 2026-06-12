@@ -1,0 +1,200 @@
+\chapter{Hipótesis y Objetivos}
+\label{ch:obj}
+
+% TODO (tesis): hipótesis y OE se conservan tal cual (son el contrato del
+% anteproyecto); la sección "Tareas asociadas" puede eliminarse o moverse a
+% apéndice. OJO: los OE y alcances mencionan las 6 categorías del esquema
+% viejo (Arithmetic/Logic/...); decidir con el asesor cómo documentar el
+% cambio al esquema por firma de energía sin romper el contrato de los OE.
+
+% -----------------------------------------------------------------------
+\section{Hipótesis}
+\label{sec:hipotesis}
+
+Un módulo hardware de clasificación de instrucciones integrado en el procesador
+CV32E40P, que expone conteos por categoría mediante registros CSR, permite
+estimar el consumo energético de aplicaciones bare-metal con un error relativo
+medio inferior al 10\,\% respecto a la medición eléctrica directa sobre la
+plataforma FPGA Nexys~A7-100T.
+
+El umbral del 10\,\% se adopta como criterio de desempeño para evaluar la
+utilidad del modelo en la comparación de regiones de código. Este margen toma
+en cuenta que la plataforma objetivo opera en bare-metal sobre FPGA, sin
+infraestructura de monitoreo energético del sistema operativo, y que cada
+categoría agrupa instrucciones con comportamientos eléctricos distintos. Bajo
+estas condiciones, el objetivo no es reemplazar la medición eléctrica de
+referencia durante la caracterización, sino obtener una estimación suficientemente
+precisa para orientar el análisis energético del firmware.
+
+% -----------------------------------------------------------------------
+\section{Objetivo general}
+\label{sec:obj_general}
+
+Diseñar e implementar un módulo hardware de clasificación de instrucciones
+integrado en el procesador CV32E40P sobre la plataforma PULPissimo, que genere
+conteos por categoría para estimar, mediante un flujo externo de análisis, el
+consumo energético de aplicaciones bare-metal ejecutadas en la FPGA.
+
+% -----------------------------------------------------------------------
+\section{Objetivos específicos}
+\label{sec:obj_especificos}
+
+\begin{enumerate}
+
+    \item Diseñar y construir el circuito de medición de potencia basado en
+          resistor de sensado de corriente y amplificador de sensado INA240
+          en configuración \emph{high-side}, y verificar su correcto
+          funcionamiento sobre la línea de alimentación de la placa Nexys~A7-100T.
+
+    \item Implementar en SystemVerilog el módulo clasificador de instrucciones
+          como bloque RTL integrado en el núcleo CV32E40P, exponiendo un
+          contador de 64 bits por cada una de las seis categorías de
+          instrucción definidas mediante pares de CSR de 32 bits.
+
+    \item Sintetizar el SoC PULPissimo con el módulo clasificador incorporado
+          sobre la FPGA Nexys~A7-100T y verificar el funcionamiento de los
+          registros CSR mediante firmware bare-metal y la cadena JTAG.
+
+    \item Caracterizar experimentalmente los coeficientes de energía $e_i$
+          por categoría de instrucción sobre la plataforma FPGA, aplicando
+          el método de bucles dominados por categoría y el método de regresión
+          por histograma.
+
+    \item Desarrollar el pipeline de análisis de datos que automatice el
+          procesamiento de las mediciones de potencia adquiridas por el sistema
+          ADS1115--LilyGO ESP32 y la lectura de registros CSR, y genere
+          estimaciones de energía, potencia promedio y desglose por categoría.
+
+    \item Validar el modelo de estimación comparando la potencia promedio estimada
+          $\bar{P}_{\text{est}} = E_{\text{est}}/\Delta t$ contra la potencia promedio medida
+          físicamente en la plataforma FPGA durante la ejecución de cargas de
+          trabajo mixtas no utilizadas en la caracterización.
+
+\end{enumerate}
+
+% -----------------------------------------------------------------------
+\section{Tareas asociadas a los objetivos específicos}
+\label{sec:tareas_objetivos}
+
+\begin{enumerate}[label=\textbf{OE\arabic*:}, leftmargin=*]
+
+    \item Circuito de medición de potencia.
+    \begin{compactitem}
+        \item Establecer la topología de medición \emph{high-side} sobre la línea
+              de alimentación de la Nexys~A7-100T.
+        \item Dimensionar el resistor de sensado a partir del rango de corriente
+              definido para la plataforma.
+        \item Conectar y probar la cadena INA240A1--ADS1115--LilyGO ESP32.
+        \item Calibrar la conversión de tensión medida a corriente y potencia.
+    \end{compactitem}
+
+    \item Módulo clasificador de instrucciones.
+    \begin{compactitem}
+        \item Establecer y justificar las categorías de instrucciones a
+              contabilizar.
+        \item Seleccionar y justificar las señales del pipeline del CV32E40P
+              utilizadas para detectar instrucciones retiradas válidamente.
+        \item Implementar la lógica de clasificación en SystemVerilog.
+        \item Implementar los contadores de 64 bits por categoría y su acceso
+              mediante pares de CSR de 32 bits.
+    \end{compactitem}
+
+    \item Integración y verificación en FPGA.
+    \begin{compactitem}
+        \item Integrar el clasificador con el banco de CSR del CV32E40P.
+        \item Sintetizar el SoC PULPissimo modificado para la FPGA Nexys~A7-100T.
+        \item Cargar y ejecutar firmware bare-metal mediante la cadena
+              GDB--OpenOCD--JTAG.
+        \item Verificar la lectura y el reinicio de los contadores mediante acceso CSR.
+    \end{compactitem}
+
+    \item Caracterización de coeficientes energéticos.
+    \begin{compactitem}
+        \item Implementar rutinas dominadas por categoría para las categorías
+              de instrucción.
+        \item Medir la potencia promedio de cada categoría en régimen estable.
+        \item Ejecutar cargas mixtas y recolectar histogramas de instrucciones.
+        \item Calcular coeficientes mediante bucles dominados por categoría y
+              regresión por histograma.
+    \end{compactitem}
+
+    \item Pipeline de análisis de datos.
+    \begin{compactitem}
+        \item Automatizar la lectura de mediciones adquiridas por el sistema
+              ADS1115--LilyGO ESP32.
+        \item Procesar las muestras de potencia y calcular energía por ejecución.
+        \item Integrar la lectura de contadores CSR en el flujo de análisis.
+        \item Generar estimaciones, tablas y visualizaciones por categoría.
+    \end{compactitem}
+
+    \item Validación del modelo.
+    \begin{compactitem}
+        \item Definir un conjunto de cargas mixtas no utilizadas durante la
+              caracterización.
+        \item Ejecutar las cargas sobre la plataforma FPGA y medir su potencia.
+        \item Comparar la potencia promedio estimada contra la potencia promedio medida.
+        \item Calcular el error relativo y verificar el cumplimiento de la
+              hipótesis.
+    \end{compactitem}
+
+\end{enumerate}
+
+% -----------------------------------------------------------------------
+\section{Alcances y limitaciones}
+\label{sec:alcances_limitaciones}
+
+El proyecto abarca el diseño, implementación y validación experimental de un
+módulo hardware de clasificación de instrucciones integrado en el procesador
+CV32E40P dentro del SoC PULPissimo. La implementación se realizará sobre la
+plataforma FPGA Nexys~A7-100T y estará orientada a firmware bare-metal, sin
+dependencia de sistema operativo.
+
+La estimación energética se limitará a un modelo por categoría de instrucción.
+Para ello se considerarán seis categorías principales: \emph{Arithmetic},
+\emph{Logic}, \emph{Memory}, \emph{Branch}, \emph{Jump} y
+\emph{Floating point}. Cada categoría tendrá un contador de 64 bits expuesto mediante pares de CSR
+personalizados de 32 bits.
+
+El trabajo incluye la construcción y uso de una cadena de medición de potencia
+externa basada en un sensor de corriente INA240A1, un convertidor ADS1115 y una
+tarjeta ESP32 para adquisición de datos. Esta cadena se utilizará como
+referencia física para caracterizar los coeficientes energéticos del modelo y
+validar la estimación calculada a partir de los contadores internos.
+
+La caracterización experimental considerará tanto el método de bucles
+dominados por categoría como el método de regresión por histograma. Los
+coeficientes obtenidos por ambos métodos se compararán según su error frente a mediciones
+físicas de referencia, y el conjunto con mejor desempeño se utilizará para la
+validación final del modelo.
+
+Como limitación principal, los coeficientes energéticos obtenidos serán válidos
+para la configuración experimental utilizada: CV32E40P integrado en PULPissimo,
+sintetizado sobre la FPGA Nexys~A7-100T y operando bajo las condiciones de
+alimentación, frecuencia y bitstream definidas durante la caracterización. Por
+tanto, no se asume que los coeficientes puedan trasladarse directamente a un
+ASIC, a otra FPGA o a otra frecuencia de operación.
+
+La medición eléctrica corresponde al consumo observado en la plataforma FPGA
+completa bajo la configuración experimental, no al consumo aislado del núcleo
+CV32E40P como circuito independiente. El modelo resultante estima el consumo
+asociado a una ejecución en esa plataforma, pero no separa
+explícitamente el aporte de todos los bloques internos del SoC ni de los
+reguladores de la placa.
+
+El clasificador trabaja a nivel de categorías de instrucción, no a nivel de
+instrucciones individuales. En consecuencia, instrucciones distintas dentro de
+una misma categoría comparten un coeficiente energético promedio, por lo que el
+modelo puede perder precisión en programas donde una categoría agrupe
+operaciones con comportamientos eléctricos muy diferentes.
+
+La validación se realizará con cargas bare-metal controladas y no contempla
+ejecución bajo sistema operativo, multiprogramación, interrupciones complejas ni
+periféricos externos con patrones de actividad no controlados. Además, el modelo
+no pretende reemplazar la medición eléctrica durante la caracterización inicial;
+la instrumentación externa sigue siendo necesaria para obtener los coeficientes
+y validar la hipótesis.
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "main"
+%%% End:

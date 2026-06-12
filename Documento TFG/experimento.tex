@@ -1,0 +1,43 @@
+\chapter{Experimento preliminar}
+\label{ch:experimento}
+
+El experimento preliminar valida el flujo de medición antes de la caracterización completa. Usa rutinas dominadas por una categoría conocida para comprobar que la plataforma muestra diferencias de potencia.
+
+Reutiliza la cadena JTAG y la cadena de medición de potencia ya descritas, sin introducir una arquitectura de prueba adicional. 
+
+% -----------------------------------------------------------------------
+\section{Objetivo del experimento}
+\label{sec:objetivo_experimento}
+
+Verificar que rutinas dominadas por distintas categorías producen diferencias medibles y repetibles en la potencia promedio. 
+
+% -----------------------------------------------------------------------
+\section{Configuración de la prueba}
+\label{sec:configuracion_experimento}
+
+El SoC PULPissimo se sintetizará sobre la FPGA Nexys~A7-100T y ejecutará firmware bare-metal cargado mediante GDB, OpenOCD y FT232H/JTAG. La corriente se medirá con el INA240A1 y el ADS1115--LilyGO ESP32.
+
+Cada rutina se ejecutará durante 10 a 60 segundos y el firmware marcará la ventana de medición con un pulso GPIO. La potencia promedio se calculará con la ecuación~\ref{eq:potencia_promedio}.
+
+% -----------------------------------------------------------------------
+\section{Rutinas de bucles dominados por categoría}
+\label{sec:bucles_homogeneos_preliminares}
+
+Las rutinas de prueba ejecutan un bloque reducido de instrucciones de una sola categoría. El objetivo es que esa categoría domine la ejecución, aunque existan instrucciones auxiliares de control.
+
+% -----------------------------------------------------------------------
+\section{Datos a recolectar}
+\label{sec:datos_experimento}
+
+Para cada rutina se registrarán la categoría dominante, el tiempo de adquisición, la potencia promedio y la dispersión entre repeticiones.
+
+% -----------------------------------------------------------------------
+\section{Criterio de viabilidad}
+\label{sec:criterio_viabilidad}
+
+El experimento será útil si rutinas de categorías distintas producen diferencias de potencia mayores que la variabilidad entre repeticiones. Si eso ocurre, queda justificada la caracterización posterior.
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "main"
+%%% End:
