@@ -15,3 +15,15 @@
 .bender/
 *.swp
 *.swo
+
+# Artefactos de XSim (suite clasif_v2)
+xsim.dir/
+*.wdb
+*.pb
+xvlog_run.log
+xelab_run.log
+sim_clasif.log
+trace_core_*.log
+*.jou
+clasif_v2/*.elf
+clasif_v2/*.hex
