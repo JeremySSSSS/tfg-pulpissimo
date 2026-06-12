@@ -14,14 +14,15 @@ GUI=1 ./run_clasif_v2_xsim.sh            # abre el GUI de XSim para inspeccionar
 TEST=clasif_v2/otro ./run_clasif_v2_xsim.sh   # correr otro test
 ```
 
-En modo GUI, `waves_clasif.tcl` hace todo solo: agrega las señales del
-clasificador al waveform y **detiene la simulación al final de la región
-medida** (condición `div=6 && mem=8 && ctrl=5` sobre registros), imprimiendo
-los 8 contadores en la consola TCL. Ahí los valores deben ser
-`alu=12 mul=5 mulh=7 div=6 mem=8 ctrl=5 float=0 divcyc=150`. Si seguís con
-`run all`, los contadores crecen sin control (volcado de resultados + printf)
-— es normal; los valores válidos son los del punto de parada. El careo con el
-modelo dorado solo corre en modo batch.
+En modo GUI el flujo es manual, como siempre: agregar las señales de
+`insn_classifier_i` al waveform desde el árbol de instancias
+(`tb_top > wrapper_i > wrapper_i > core_i`) y darle `run all`.
+`break_clasif.tcl` solo arma un **breakpoint** (`div=6 && mem=8 && ctrl=5`
+sobre registros) que pausa la simulación al final de la región medida: ahí
+los contadores valen `alu=12 mul=5 mulh=7 div=6 mem=8 ctrl=5 float=0
+divcyc=150`. Si continuás con `run all`, los contadores siguen creciendo
+(volcado de resultados + printf) — es normal; los valores válidos son los del
+punto de parada. El careo con el modelo dorado solo corre en modo batch.
 
 Notas de `add_condition` en XSim 2022.1 (aprendidas a golpes): los literales
 de las condiciones se interpretan en BINARIO (escribir 6 como `110`), no

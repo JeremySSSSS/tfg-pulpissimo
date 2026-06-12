@@ -62,12 +62,12 @@ xelab tb_top -L uvm -debug typical -s tb_top_clasif > xelab_run.log 2>&1 \
 
 if [ "${GUI:-0}" = "1" ]; then
   echo "== Simulando (GUI) =="
-  # waves_clasif.tcl agrega las señales del clasificador al waveform y
-  # DETIENE la simulación automáticamente al final de la región medida
-  # (div=6 && mem=8 && ctrl=5), imprimiendo los 8 contadores. El cursor
-  # queda en el instante correcto para inspeccionar/capturar.
+  # GUI normal: agregá las señales de insn_classifier_i al waveform desde el
+  # árbol de instancias (tb_top > wrapper_i > wrapper_i > core_i) y dale
+  # "run all". break_clasif.tcl solo arma un breakpoint que pausa la sim al
+  # final de la región medida (ahí los contadores valen 12/5/7/6/8/5/0/150).
   xsim tb_top_clasif -gui \
-    --tclbatch clasif_v2/waves_clasif.tcl \
+    --tclbatch clasif_v2/break_clasif.tcl \
     --testplusarg firmware="${TEST}.hex" \
     --testplusarg maxcycles="${MAXCYCLES}"
 else
