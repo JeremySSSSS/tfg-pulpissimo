@@ -49,7 +49,7 @@ cambio del TFG. `git log --oneline` muestra exactamente qué se modificó y
   que las propias instrucciones `csrr`/`csrw` de lectura y reseteo de contadores no
   contaminan la categoría Arithmetic.
 
-**Mapeo de CSR — `rtl/include/cv32e40p_pkg.sv`** (rango custom 0xBC0–0xBCB, User custom RW):
+**Mapeo de CSR — `rtl/include/cv32e40p_pkg.sv`** (rango custom RW de modo máquina 0xBC0–0xBCB):
 
 | CSR | Campo | | CSR | Campo |
 |------|-----------|---|------|-----------|

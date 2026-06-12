@@ -32,7 +32,7 @@ Diff sobre la base upstream `7a49867` (*Bump FPU to pulp-v0.1.3*): **8 archivos*
   Arithmetic (el decoder deja `alu_en=1`, `alu_operator=SLTU` para los CSR).
 
 ### Mapeo de CSR — `rtl/include/cv32e40p_pkg.sv`
-Rango **custom 0xBC0–0xBCB** (User custom RW del spec RISC-V):
+Rango **custom 0xBC0–0xBCB** (custom RW de modo máquina según el privileged spec RISC-V: bits [9:8]=11 → machine, [11:10]=10 → read/write):
 
 | CSR | Campo | | CSR | Campo |
 |------|-----------|---|------|-----------|
