@@ -1,0 +1,12 @@
+modelsim.ini
+xcelium.d/
+xrun.history
+xrun.log
+.bender
+/utils/bin/bender
+work/
+compile.tcl
+working_dir/
+/utils/bin/padrick
+/Bender.local
+/build
