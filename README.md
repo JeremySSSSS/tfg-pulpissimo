@@ -45,46 +45,56 @@ cambio del TFG. `git log --oneline` muestra exactamente qué se modificó y
 
 ### 1. Clasificador de instrucciones (`cv32e40p/`)
 
-**Módulo nuevo — `rtl/cv32e40p_insn_classifier.sv`**
-- Clasifica cada instrucción **retirada** en 6 categorías usando las señales del
-  pipeline en EX: `alu_en`/`alu_operator` (arith vs logic), `mult_en`, `data_req`
-  (load/store → Memory), `branch`, `jump`, `apu_en` (Floating point).
-- **6 contadores de 64 bits**, leídos como **12 CSR en pares LO/HI**.
-- **Filtro de accesos CSR**: el conteo solo ocurre con `retire && !csr_access`, de modo
-  que las propias instrucciones `csrr`/`csrw` de lectura y reseteo de contadores no
-  contaminan la categoría Arithmetic.
+**Módulo nuevo — `rtl/cv32e40p_insn_classifier.sv`** (v2, categorías por unidad
+activa; especificación completa en [`DISENO_CLASIFICADOR_V2.md`](DISENO_CLASIFICADOR_V2.md))
+- Clasifica cada instrucción **retirada** según la unidad funcional que activa,
+  con **7 contadores de instrucciones + 1 contador de ciclos** (todos de
+  64 bits, leídos como **16 CSR en pares LO/HI**).
+- Branches: no tomado → ALU_SIMPLE (solo un compare); tomado → CTRL (paga el
+  flush/refetch, mismo mecanismo que jal/jalr).
+- **Modelo híbrido**: la división (latencia variable 4–32 ciclos según
+  operandos) se modela por ciclos de ocupación (DIV_CYC), el resto por
+  instrucción: `E = Σ eᵢ·nᵢ + p_div·c_div`.
+- **Filtros**: los accesos CSR (`csr_access`) y las instrucciones de sistema
+  (`mret/uret/dret/wfi/fence`, evento nuevo en `id_stage`) no se cuentan.
 
-**Mapeo de CSR — `rtl/include/cv32e40p_pkg.sv`** (rango custom RW de modo máquina 0xBC0–0xBCB):
+**Mapeo de CSR — `rtl/include/cv32e40p_pkg.sv`** (rango custom RW de modo máquina 0xBC0–0xBCF):
 
-| CSR | Campo | | CSR | Campo |
-|------|-----------|---|------|-----------|
-| 0xBC0 | ARITH_LO  | | 0xBC6 | BRANCH_LO |
-| 0xBC1 | ARITH_HI  | | 0xBC7 | BRANCH_HI |
-| 0xBC2 | LOGIC_LO  | | 0xBC8 | JUMP_LO   |
-| 0xBC3 | LOGIC_HI  | | 0xBC9 | JUMP_HI   |
-| 0xBC4 | MEMORY_LO | | 0xBCA | FLOAT_LO  |
-| 0xBC5 | MEMORY_HI | | 0xBCB | FLOAT_HI  |
+| Par LO/HI | Contador | Cuenta |
+|-----------|----------|--------|
+| 0xBC0/0xBC1 | ALU_SIMPLE (+ branch no tomado) | instrucciones |
+| 0xBC2/0xBC3 | MUL | instrucciones |
+| 0xBC4/0xBC5 | MULH | instrucciones |
+| 0xBC6/0xBC7 | DIV | instrucciones |
+| 0xBC8/0xBC9 | MEM | instrucciones |
+| 0xBCA/0xBCB | CTRL (jal/jalr + branch tomado) | instrucciones |
+| 0xBCC/0xBCD | FLOAT | instrucciones |
+| 0xBCE/0xBCF | DIV_CYC | ciclos del divisor |
 
 Cada contador se reconstruye como `(HI << 32) | LO`.
 
 **Integración:**
 - `rtl/cv32e40p_core.sv`: instancia `insn_classifier_i` conectada al pipeline y
   multiplexor de lectura `csr_rdata = cat_csr_hit ? cat_csr_rdata : csr_rdata_cs`.
-- `rtl/cv32e40p_decoder.sv`: acepta los 12 CSR custom sin lanzar *illegal instruction*.
+- `rtl/cv32e40p_decoder.sv`: acepta los 16 CSR custom sin lanzar *illegal instruction*.
+- `rtl/cv32e40p_id_stage.sv`: evento `mhpmevent_system` para el filtro de sistema.
 - `Bender.yml`, `cv32e40p_manifest.flist`, `src_files.yml`: registran el módulo nuevo
   en el orden de compilación (decoder → classifier → core).
 
-### 2. Firmware de caracterización (`cv32e40p/firmware/`, `cv32e40p/csr_test/`)
+**Verificación — `example_tb/core/clasif_v2/`**: suite XSim con modelo dorado
+(clasifica el trace de instrucciones retiradas en software y compara contra
+los CSR). Primer PASS 2026-06-11 con DIV_CYC ciclo-exacto. Ver su README.
 
-- `firmware/dominated_loops/`: bucles dominados por categoría (`arith.S`, `logic.S`,
-  `memory.S`, `branch.S`, `jump.S`, `float.S`) con 64 instrucciones objetivo + 2 de
-  control por iteración (~97 % de dominancia). La ventana de medición se delimita con
-  un flanco en GPIO8 → GPIO26 de la ESP32 y termina en `ebreak`.
+### 2. Firmware de caracterización (`cv32e40p/firmware/`)
+
+- `firmware/dominated_loops/`: bucles dominados por categoría con 64
+  instrucciones objetivo + 2 de control por iteración (~97 % de dominancia).
+  La ventana de medición se delimita con un flanco en GPIO8 → GPIO26 de la
+  ESP32 y termina en `ebreak`.
+  *Pendiente:* reescribir los bucles al esquema v2 (7 categorías, operandos
+  variados para división) y al mapeo de 16 CSR.
 - `firmware/dominated_loops/frequency_probe.S`: verificación de la frecuencia real del
   core (10 MHz con el bitstream actual).
-- `csr_test/`: test mínimo de los contadores vía JTAG/GDB (`COMANDOS_JTAG.md`).
-  *Pendiente conocido:* `csr_test.S` usa el mapeo antiguo 0xBC0–0xBC5; falta
-  actualizarlo al esquema LO/HI 0xBC0–0xBCB.
 
 ### 3. Plataforma FPGA Nexys A7-100T (`pulpissimo/target/fpga/pulpissimo-nexys/`)
 
@@ -103,8 +113,10 @@ Cada contador se reconstruye como `(HI << 32) | LO`.
 
 | Archivo | Contenido |
 |---|---|
-| `xilinx_pulpissimo_12csr.bit` | Bitstream actual: clasificador con 12 CSR + fix JTAG TDO |
-| `xilinx_pulpissimo_jtagfix_20260604.bit` | Bitstream previo (solo fix JTAG TDO), referencia |
+| `xilinx_pulpissimo_12csr.bit` | Bitstream grabado actualmente en la FPGA: clasificador **v1** (12 CSR) + fix JTAG TDO |
+
+*Pendiente:* re-síntesis con el clasificador v2 (16 CSR) — el RTL de este
+árbol ya es v2 y está verificado en simulación.
 
 ## Nota de reproducibilidad (Bender)
 
