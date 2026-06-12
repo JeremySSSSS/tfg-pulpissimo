@@ -9,9 +9,15 @@ las reglas del esquema y compara contra los CSR que el test imprime.
 ## Uso
 
 ```bash
-./run_clasif_v2_xsim.sh            # test por defecto (clasif_smoke)
-TEST=clasif_v2/otro ./run_clasif_v2_xsim.sh
+./run_clasif_v2_xsim.sh                  # batch: simula + careo con el golden, PASS/FAIL
+GUI=1 ./run_clasif_v2_xsim.sh            # abre el GUI de XSim para inspeccionar ondas
+TEST=clasif_v2/otro ./run_clasif_v2_xsim.sh   # correr otro test
 ```
+
+En modo GUI: buscar `insn_classifier_i` en el árbol de instancias (dentro del
+wrapper → core), arrastrar sus señales al waveform (`alu_q`, `div_q`,
+`divcyc_q`, `branch_q1`, los `*_inc`) y ejecutar `run all`. El careo con el
+modelo dorado solo corre en modo batch.
 
 Requiere Vivado 2022.1 (XSim + UVM para el tracer) y la toolchain RISC-V
 PULP. PASS/FAIL por código de salida.
