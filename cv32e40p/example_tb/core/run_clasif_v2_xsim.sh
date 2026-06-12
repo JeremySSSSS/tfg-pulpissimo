@@ -62,10 +62,12 @@ xelab tb_top -L uvm -debug typical -s tb_top_clasif > xelab_run.log 2>&1 \
 
 if [ "${GUI:-0}" = "1" ]; then
   echo "== Simulando (GUI) =="
-  # Abre el GUI de XSim; agregá las señales del clasificador con:
-  #   add_wave /tb_top/wrapper_i/ram_i/../insn_classifier_i/*  (o desde el árbol)
-  # y corré con: run all
+  # waves_clasif.tcl agrega las señales del clasificador al waveform y
+  # DETIENE la simulación automáticamente al final de la región medida
+  # (div=6 && mem=8 && ctrl=5), imprimiendo los 8 contadores. El cursor
+  # queda en el instante correcto para inspeccionar/capturar.
   xsim tb_top_clasif -gui \
+    --tclbatch clasif_v2/waves_clasif.tcl \
     --testplusarg firmware="${TEST}.hex" \
     --testplusarg maxcycles="${MAXCYCLES}"
 else

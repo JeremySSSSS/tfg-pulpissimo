@@ -14,10 +14,20 @@ GUI=1 ./run_clasif_v2_xsim.sh            # abre el GUI de XSim para inspeccionar
 TEST=clasif_v2/otro ./run_clasif_v2_xsim.sh   # correr otro test
 ```
 
-En modo GUI: buscar `insn_classifier_i` en el árbol de instancias (dentro del
-wrapper → core), arrastrar sus señales al waveform (`alu_q`, `div_q`,
-`divcyc_q`, `branch_q1`, los `*_inc`) y ejecutar `run all`. El careo con el
+En modo GUI, `waves_clasif.tcl` hace todo solo: agrega las señales del
+clasificador al waveform y **detiene la simulación al final de la región
+medida** (condición `div=6 && mem=8 && ctrl=5` sobre registros), imprimiendo
+los 8 contadores en la consola TCL. Ahí los valores deben ser
+`alu=12 mul=5 mulh=7 div=6 mem=8 ctrl=5 float=0 divcyc=150`. Si seguís con
+`run all`, los contadores crecen sin control (volcado de resultados + printf)
+— es normal; los valores válidos son los del punto de parada. El careo con el
 modelo dorado solo corre en modo batch.
+
+Notas de `add_condition` en XSim 2022.1 (aprendidas a golpes): los literales
+de las condiciones se interpretan en BINARIO (escribir 6 como `110`), no
+acepta `-label` ni literales estilo Verilog (`2'b00`), las señales
+combinacionales producen disparos falsos por glitches (usar registros), y en
+t=0 las X disparan cualquier condición (armar después de `run 100 ns`).
 
 Requiere Vivado 2022.1 (XSim + UVM para el tracer) y la toolchain RISC-V
 PULP. PASS/FAIL por código de salida.
