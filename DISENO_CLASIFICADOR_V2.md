@@ -170,6 +170,16 @@ ocupación de la unidad.*
    como **validación de que p_div es constante** (los tres deben dar el mismo
    p_div dentro del ruido).
 
+   Uso en el modelo: `n_div` no lleva coeficiente (sirve para el invariante y
+   para reportar `c_div/n_div` = latencia promedio observada). En el método de
+   regresión (M2), la columna de división de la matriz de conteos lleva
+   **c_div en vez de n_div**; las incógnitas son los 6 eᵢ por instrucción +
+   p_div. Para comparar con la literatura por instrucción (Tiwari/Fang):
+   `e_div_efectivo = p_div·(c_div/n_div)`, aclarando que depende de la carga.
+   Ventaja de caracterización: en el bucle dominado de división la dominancia
+   **en ciclos** supera el 99 % (cada div ≈ 25 ciclos vs 1 de las auxiliares),
+   mejor que la dominancia por instrucciones de las demás categorías.
+
    Nota de implementación: las burbujas del pipeline cargan los regs ID/EX
    con `alu_en=1, ALU_SLTU` (`id_stage:1593-1597`) — no contaminan DIV_CYC
    (SLTU ∉ ops de división) ni los contadores de instrucciones (las burbujas
