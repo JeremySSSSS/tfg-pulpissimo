@@ -259,3 +259,62 @@ mulh aislada, accesos CSR intercalados (filtro), instrucciones de sistema
   coeficientes más altos (su energía sale del core hacia la SRAM del SoC).
 - **Bitstream**: el actual (v1) sigue siendo válido para lo ya medido; el v2
   requiere re-síntesis.
+
+## 9. Caracterización en banco: potencia → energía (pendiente de redactar)
+
+> Nota guardada 2026-06-12 para el marco teórico / resultados del Documento TFG.
+> Captura la conclusión de la discusión sobre las mediciones físicas del v1.
+
+**La trampa: potencia ≠ energía.** El circuito (INA240→ADS1115→ESP32) mide
+**potencia** `P̄` (W = J/s). El modelo necesita **energía por instrucción**
+`eᵢ` (J). Comparar potencia cruda entre bucles **engaña**.
+
+**Evidencia empírica (v1, bucles dominados):** el bucle de `arith` midió
+**más potencia** que el de `float`. Físicamente parece al revés, pero es
+correcto: `float.S` es una cadena de dependencias serial y la FPU tiene
+latencia (apu_lat=2 para FP32, `C_LAT_FP32='d1`) → el core stallea ~3 ciclos
+por op → IPC≈0.34 vs arith IPC≈0.97. Float retira instrucciones ~3× más lento,
+así que mete **menos conmutación por segundo** → **menos potencia**, aunque
+cada `fadd` cueste **más energía**.
+
+**La corrección — normalizar por tiempo (CPI/IPC):**
+
+```
+        ΔP            ΔP · T
+eᵢ = ──────────  =  ──────────       T = ciclos / f_clk = (s2−s1)/f_clk
+     IPC · f_clk        N
+```
+
+- `ΔP = P̄_loop − P̄_idle` → ESP32
+- `T` (ciclos) → `mcycle` (`s1`/`s2` ya capturados en los `.S`)
+- `N` → contador de categoría (o LOOP_COUNT×64)
+
+El IPC bajo de float **amplifica** su `eᵢ`: aunque tenga menos potencia, sale
+más caro por instrucción. Consistencia que cierra el modelo: al reconstruir
+potencia `P̄ = E/T = (Σeᵢnᵢ)/T`, un programa con muchos floats da **energía
+alta pero potencia baja** (más energía repartida en más tiempo) — reproduce la
+medición. Lo que vacía la batería es la energía, no la potencia: esto justifica
+medir con un clasificador de instrucciones y no con un multímetro instantáneo.
+
+**Ambos métodos de caracterización necesitan el tiempo (ciclos):**
+- *Bucles dominados (M1):* IPC **explícito**, una categoría por corrida.
+- *Regresión (M2):* IPC **implícito** — cada `Eₖ = P̄ₖ·Tₖ` lleva el tiempo
+  adentro; se resuelven todos los `eᵢ` (+ `p_div`) de cargas mixtas. Más robusta
+  (no depende de dominancia perfecta, admite término de base/leakage). **Error a
+  evitar:** regresar contra potencia y conteos directos (`P̄ = Σeᵢnᵢ`) cae en la
+  misma trampa; debe ser **energía** (o potencia contra *tasas* `nᵢ/T`).
+
+**Referencias (verificar año/páginas antes de entregar):**
+- Tiwari, Malik, Wolfe (1994), *Power Analysis of Embedded Software…*, IEEE
+  Trans. VLSI Syst. 2(4):437-445 — modelo `E = Σ eᵢ·nᵢ` (base del clasificador).
+- Tiwari et al. (1996), *Instruction Level Power Analysis…*, J. VLSI Sig. Proc.
+  13:223-238.
+- Hennessy & Patterson, *Computer Architecture: A Quantitative Approach* —
+  definiciones `E = P·t`, `t = ciclos/f`, **CPI** (= 1/IPC). La literatura usa
+  CPI; conviene redactar en CPI para alinear.
+- Isci & Martonosi (2003), *Runtime Power Monitoring in High-End Processors*,
+  MICRO-36 — potencia desde contadores de HW (justifica fase 2).
+- Contreras & Martonosi (2005), *Power Prediction for Intel XScale… PMU Events*,
+  ISLPED — regresión lineal sobre eventos de contador.
+- Bircher & John, *Complete System Power Estimation Using Processor Performance
+  Events*, IEEE Trans. Computers — modelos de regresión con contadores.
