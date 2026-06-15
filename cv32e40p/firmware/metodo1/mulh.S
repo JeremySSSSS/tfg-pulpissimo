@@ -1,5 +1,6 @@
-// M1 - bucle dominado MULH.  ~5 min a 10 MHz (9.3M iter x ~324 cic/iter).
-// 64 mulh/mulhu/mulhsu (FSM ~4 ciclos) por iteracion + addi/bnez de control.
+// M1 - bucle dominado MULH.  ~5 min a 10 MHz (2.325M iter x 256 instr/iter).
+// 256 mulh/mulhu/mulhsu (FSM ~4 ciclos) por iteracion + addi/bnez de control.
+// Desenrollado x4 (vs 64) para que el overhead addi/bnez pese 1-en-256 (0.4%).
 // Ventana de medicion = flanco de GPIO8 (-> ESP32). Vuelca 16 CSR + mcycle a 'results'.
 #include "platform.inc"
 
@@ -18,7 +19,7 @@ _start:
     csrci 0x320, 1                  // habilita mcycle
 
     reset_category_counters
-    li s0, 9300000                  // LOOP_COUNT
+    li s0, 2325000                  // LOOP_COUNT
 
     gpio_high
 
@@ -27,7 +28,7 @@ _start:
 
     csrr s1, mcycle
 measurement_loop:
-    .rept 16
+    .rept 64
     mulh   t2, t0, t1
     mulhu  t3, t0, t1
     mulhsu t4, t0, t1

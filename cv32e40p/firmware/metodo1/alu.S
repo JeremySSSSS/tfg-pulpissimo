@@ -1,5 +1,6 @@
-// M1 - bucle dominado ALU.  ~5 min a 10 MHz (45M iter x ~68 cic/iter).
-// 64 add/xor/slli por iteracion (ALU simple, 1 ciclo) + addi/bnez de control.
+// M1 - bucle dominado ALU.  ~5 min a 10 MHz (11.25M iter x 256 instr/iter).
+// 256 add/xor/slli por iteracion (ALU simple, 1 ciclo) + addi/bnez de control.
+// Desenrollado x4 (vs 64) para que el overhead addi/bnez pese 1-en-256 (0.4%).
 // Ventana de medicion = flanco de GPIO8 (-> ESP32). Al final vuelca los 16 CSR
 // + mcycle ini/fin a 'results' (leer por JTAG con  x/18xw &results).
 #include "platform.inc"
@@ -19,7 +20,7 @@ _start:
     csrci 0x320, 1                  // habilita mcycle (mcountinhibit.CY = 0)
 
     reset_category_counters
-    li s0, 45000000                 // LOOP_COUNT
+    li s0, 11250000                 // LOOP_COUNT
 
     gpio_high                       // abre la ventana medida
 
@@ -28,7 +29,7 @@ _start:
 
     csrr s1, mcycle
 measurement_loop:
-    .rept 16
+    .rept 64
     addi t0, t0, 1
     xor  t1, t1, t0
     slli t2, t0, 2

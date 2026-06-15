@@ -1,5 +1,6 @@
-// M1 - bucle dominado DIV.  ~5 min a 10 MHz (2.23M iter x ~1348 cic/iter).
-// 64 div/divu/rem/remu (divisor serial, data-dependent ~21 cic/div) por iteracion.
+// M1 - bucle dominado DIV.  ~5 min a 10 MHz (557.5k iter x 256 instr/iter).
+// 256 div/divu/rem/remu (divisor serial, data-dependent ~21 cic/div) por iteracion.
+// Desenrollado x4 (vs 64) para que el overhead addi/bnez pese 1-en-256 (0.4%).
 // El coeficiente de esta categoria es p_div (pJ/CICLO de DIVCYC), modelo hibrido.
 // Ventana de medicion = flanco de GPIO8 (-> ESP32). Vuelca 16 CSR + mcycle a 'results'.
 #include "platform.inc"
@@ -19,7 +20,7 @@ _start:
     csrci 0x320, 1                  // habilita mcycle
 
     reset_category_counters
-    li s0, 2230000                  // LOOP_COUNT
+    li s0, 557500                   // LOOP_COUNT
 
     gpio_high
 
@@ -28,7 +29,7 @@ _start:
 
     csrr s1, mcycle
 measurement_loop:
-    .rept 16
+    .rept 64
     div  t0, a1, a2
     divu t1, a1, a2
     rem  t2, a1, a2

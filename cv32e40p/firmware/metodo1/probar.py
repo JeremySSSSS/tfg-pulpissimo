@@ -16,7 +16,9 @@ Uso:
     python3 probar.py valid
     python3 probar.py gcd sort crc valid bsearch dotprod
 """
+import csv
 import os
+import statistics
 import sys
 import time
 
@@ -43,6 +45,32 @@ def find_elf(prog):
     return None
 
 
+def load_m1_dynamic(path):
+    """Modelo corregido: separa estatica de dinamica.
+    Devuelve (P_idle [W], e_din [J/instr]) donde
+      e_din_i = (P_loop_i - P_idle) * T_i / n_i   (energia dinamica por instruccion,
+                solo el exceso sobre idle, medido en cada bucle dominado).
+    El modelo es  E = P_idle*T + sum e_din_i * n_i  (T de mcycle -> ve el IPC)."""
+    by_cat, p_idle = {}, []
+    with open(path) as f:
+        for r in csv.DictReader(f):
+            if r["unit"] == "W":
+                p_idle.append(float(r["p_avg_w"]))      # idle = linea base
+            else:
+                by_cat.setdefault(r["category"], []).append(r)
+    P_idle = statistics.mean(p_idle)
+    e_din = np.zeros(len(m2.COLS))
+    for j, (label, lo) in enumerate(m2.COLS):
+        cat = label[2:]                                  # "e_alu"->"alu", "p_div"->"div"
+        vals = []
+        for r in by_cat[cat]:
+            p = float(r["p_avg_w"]); T = float(r["T_s"])
+            ni = int(r[f"w{lo}"], 16) + (int(r[f"w{lo+1}"], 16) << 32)
+            vals.append((p - P_idle) * T / ni)           # J por instruccion (dinamica)
+        e_din[j] = statistics.mean(vals)
+    return P_idle, e_din
+
+
 def wait_new_row(seen, timeout=120, poll=3):
     t0 = time.time()
     while time.time() - t0 < timeout:
@@ -61,18 +89,25 @@ def main():
                  "(p.ej. valid gcd sort crc bsearch dotprod)")
 
     here = os.path.dirname(os.path.abspath(__file__))
-    e = load_m1_coeffs(os.path.join(here, "runs_m1.csv"))   # coeficientes de HOY
+    path = os.path.join(here, "runs_m1.csv")
+    e = load_m1_coeffs(path)                    # modelo A: E = sum e_i*n_i
+    P_idle, e_din = load_m1_dynamic(path)       # modelo B: E = P_idle*T + sum e_din_i*n_i
 
-    print("Coeficientes M1 usados (runs_m1.csv de hoy):")
-    for (label, _), val in zip(m2.COLS, e):
-        unit = "pJ/ciclo" if label == "p_div" else "pJ/instr"
-        print(f"   {label:8s} = {val*1e12:12.2f} {unit}")
-    print()
+    print(f"P_idle = {P_idle:.4f} W   (linea base estatica)\n")
+    print("Coeficientes: total (modelo A) vs dinamico (modelo B = exceso sobre idle)")
+    print(f"   {'cat':8s} {'e_total':>14s} {'e_dinamico':>14s} {'din/total':>10s}")
+    for (label, _), et, ed in zip(m2.COLS, e, e_din):
+        unit = "pJ/cic" if label == "p_div" else "pJ/ins"
+        frac = 100 * ed / et if et else 0.0
+        print(f"   {label:8s} {et*1e12:11.1f}{unit} {ed*1e12:11.1f}{unit} {frac:9.2f}%")
+    print("   (din/total chico => a 10 MHz casi toda la energia es ESTATICA)\n")
 
     seen = len(fs.fetch_rows())
-    print(f"{'programa':10s} {'T[s]':>7s} {'P_med[W]':>9s} {'P_est[W]':>9s} {'errP%':>7s}"
-          f"   {'E_med[J]':>10s} {'E_est[J]':>10s}")
-    results = []
+    print(f"{'programa':10s} {'T[s]':>7s} {'P_med':>7s} | {'P_estA':>7s} {'errA%':>7s} |"
+          f" {'P_estB':>7s} {'errB%':>7s}")
+    print(f"{'':10s} {'':>7s} {'(med)':>7s} | {'(Σe·n)':>7s} {'':>7s} |"
+          f" {'(Pidle·T+Σedin·n)':>7s}")
+    rA, rB = [], []
     for prog in progs:
         elf = find_elf(prog)
         if elf is None:
@@ -88,20 +123,20 @@ def main():
         seen = len(rows)
         p_avg = row["p_avg"]
 
-        E_med = p_avg * T               # energia real medida (P_avg * T)
-        E_est = float(e @ n)            # energia estimada con coef de hoy
-        P_med = p_avg                   # potencia real medida por el ESP32
-        P_est = E_est / T               # potencia estimada = E_est / T
-        err = 100 * (P_est - P_med) / P_med   # = error en energia (T se cancela)
-        print(f"{prog:10s} {T:7.2f} {P_med:9.4f} {P_est:9.4f} {err:7.2f}"
-              f"   {E_med:10.3f} {E_est:10.3f}")
-        results.append((prog, err))
+        P_med = p_avg
+        P_estA = float(e @ n) / T                          # modelo A (actual)
+        P_estB = P_idle + float(e_din @ n) / T             # modelo B (corregido)
+        errA = 100 * (P_estA - P_med) / P_med
+        errB = 100 * (P_estB - P_med) / P_med
+        print(f"{prog:10s} {T:7.2f} {P_med:7.4f} | {P_estA:7.4f} {errA:7.2f} |"
+              f" {P_estB:7.4f} {errB:7.2f}")
+        rA.append(abs(errA)); rB.append(abs(errB))
         time.sleep(5)                   # deja subir al ESP32
 
-    if len(results) > 1:
-        errs = [abs(er) for _, er in results]
-        print(f"\nerror absoluto medio en potencia ({len(errs)} programas) = "
-              f"{sum(errs)/len(errs):.2f}%")
+    if rA:
+        print(f"\nerror absoluto medio en potencia ({len(rA)} prog):")
+        print(f"   modelo A (actual, E=Σe·n)            = {sum(rA)/len(rA):.2f}%")
+        print(f"   modelo B (corregido, E=Pidle·T+Σedin·n) = {sum(rB)/len(rB):.2f}%")
 
 
 if __name__ == "__main__":

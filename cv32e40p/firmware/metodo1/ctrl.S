@@ -1,5 +1,6 @@
-// M1 - bucle dominado CTRL.  ~5 min a 10 MHz (22.8M iter x ~132 cic/iter).
-// 64 saltos j .+4 (flush/refetch del pipeline) por iteracion + addi/bnez.
+// M1 - bucle dominado CTRL.  ~5 min a 10 MHz (5.7M iter x 256 instr/iter).
+// 256 saltos j .+4 (flush/refetch del pipeline) por iteracion + addi/bnez.
+// Desenrollado x4 (vs 64) para que el overhead addi/bnez pese 1-en-256 (0.4%).
 // Ventana de medicion = flanco de GPIO8 (-> ESP32). Vuelca 16 CSR + mcycle a 'results'.
 #include "platform.inc"
 
@@ -18,13 +19,13 @@ _start:
     csrci 0x320, 1                  // habilita mcycle
 
     reset_category_counters
-    li s0, 22800000                 // LOOP_COUNT
+    li s0, 5700000                  // LOOP_COUNT
 
     gpio_high
 
     csrr s1, mcycle
 measurement_loop:
-    .rept 64
+    .rept 256
     j . + 4
     .endr
     addi s0, s0, -1

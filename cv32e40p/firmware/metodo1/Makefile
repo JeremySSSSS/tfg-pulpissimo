@@ -8,12 +8,19 @@ OBJDUMP := $(CROSS)objdump
 SIZE    := $(CROSS)size
 
 CATS := alu mul mulh div mem ctrl float idle
-# Programas de validacion: mezclan las 7 categorias (todos usan float -> rv32imfc).
+# Programas de validacion sinteticos: mezclan las 7 categorias (usan float).
 MIXES := mix1 mix2 mix3
-ELFS  := $(addsuffix .elf,$(CATS)) $(addsuffix .elf,$(MIXES))
+# Programas REALES (benchmarks): kernel C + harness.S. aes=crypto, dijkstra=grafos.
+# Mezcla natural de instrucciones que decide el compilador. (nbody descartado:
+# este bitstream se traba con cadenas seriales de dependencia FP, ver fir/dotprod.)
+REAL := aes dijkstra
+ELFS  := $(addsuffix .elf,$(CATS)) $(addsuffix .elf,$(MIXES)) $(addsuffix .elf,$(REAL))
 
 FLAGS := -nostdlib -nostartfiles -static -Os -g -mabi=ilp32 \
 	-Wl,-T,link.ld -Wl,--build-id=none -I.
+
+# Para kernels C: evita que el compilador invente memcpy/memset o builtins.
+KFLAGS := $(FLAGS) -fno-builtin -fno-tree-loop-distribute-patterns
 
 # Enteras en rv32imc; float y los mix necesitan la extension F.
 ARCH       := rv32imc
@@ -25,9 +32,16 @@ mix3.elf:  ARCH := rv32imfc
 .PHONY: all clean disassemble sizes
 all: $(ELFS)
 
-# Cada .elf se compila de su unico .S (+ includes de plataforma).
+# Cada .elf de categoria/mix se compila de su unico .S (+ includes de plataforma).
 %.elf: %.S platform.inc link.ld
 	$(CC) $(FLAGS) -march=$(ARCH) -o $@ $<
+
+# Programas reales: harness.S (ventana GPIO + dump) + un kernel C con run_workload().
+# REPS ajustable para la duracion (la T real la mide mcycle; ~15-30 s a 10 MHz).
+aes.elf:      harness.S wl_aes.c      platform.inc link.ld
+	$(CC) $(KFLAGS) -march=rv32imc  -DREPS=150000 -o $@ harness.S wl_aes.c
+dijkstra.elf: harness.S wl_dijkstra.c platform.inc link.ld
+	$(CC) $(KFLAGS) -march=rv32imc  -DREPS=4000 -o $@ harness.S wl_dijkstra.c
 
 disassemble: all
 	@for elf in $(ELFS); do \
