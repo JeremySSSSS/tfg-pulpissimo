@@ -1,0 +1,10 @@
+"# Metodo 2 (chopper). Generado 2026-06-18 22:59:55. coef = delta*CPI/f [J/instr], div = delta/f [J/ciclo]. CPI de cpi_categorias.csv"
+parametro,coef,unidad
+P_idle,9.145294,W
+alu,1.924557e-09,J/instr
+mul,8.960639e-10,J/instr
+mulh,2.390937e-09,J/instr
+div,3.309000e-10,J/ciclo
+mem,1.762048e-09,J/instr
+ctrl,1.705626e-09,J/instr
+float,2.010026e-09,J/instr
