@@ -1,7 +1,6 @@
 # TFG — Módulo hardware de clasificación de instrucciones para estimación de consumo energético en RISC-V
 
 **Estudiante:** Jeremy Jesús Soto Chacón · Ingeniería Electrónica, Instituto Tecnológico de Costa Rica
-**Asesor:** Luis G. León-Vega
 **Plataforma:** CV32E40P (RV32IMC) sobre PULPissimo, FPGA Digilent Nexys A7-100T (Artix-7)
 
 ## Descripción
