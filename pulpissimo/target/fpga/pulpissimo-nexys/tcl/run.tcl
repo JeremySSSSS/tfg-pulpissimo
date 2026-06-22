@@ -39,6 +39,7 @@ set CLK_HALFPERIOD_NS [expr ${FC_CLK_PERIOD_NS} / 2.0]
 
 # Add toplevel wrapper
 add_files -norecurse $FPGA_RTL/xilinx_pulpissimo.v
+add_files -norecurse $FPGA_RTL/xadc_temp.v
 
 # Add Xilinx IPs
 read_ip $FPGA_IPS/xilinx_clk_mngr/xilinx_clk_mngr.srcs/sources_1/ip/xilinx_clk_mngr/xilinx_clk_mngr.xci

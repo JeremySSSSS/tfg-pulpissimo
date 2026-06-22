@@ -1,4 +1,9 @@
 open_project pulpissimo-nexys.xpr
+# Agrega el modulo XADC (temperatura del die, TFG) si aun no esta en el proyecto.
+if {[llength [get_files -quiet xadc_temp.v]] == 0} {
+  add_files -norecurse rtl/xadc_temp.v
+  puts ">>> xadc_temp.v agregado al proyecto."
+}
 set_property STEPS.SYNTH_DESIGN.TCL.POST "" [get_runs synth_1]
 set_property STEPS.SYNTH_DESIGN.TCL.PRE "" [get_runs synth_1]
 set_property STEPS.INIT_DESIGN.TCL.PRE "" [get_runs impl_1]

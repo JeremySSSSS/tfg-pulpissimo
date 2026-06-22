@@ -29,13 +29,11 @@ constexpr uint8_t LORA_RESET_PIN = 23;
 #define RUN_LABEL "chopper"
 #endif
 
-// AIN0-GND, continuo, +/-4.096 V, 860 SPS. SHUNT_OHMS calibrado por POTENCIA
-// (idle real ~5.05 W): el paralelo dejo el shunt efectivo en ~91mohm, NO 50. Con
-// 91mohm + G=20 a 1A da V_out~1.82V; +/-4.096V clipea a 2.25A (margen ok),
-// +/-2.048V clipearia a 1.125A (riesgo en los picos de alu). Resolucion 125 uV/LSB.
-constexpr uint16_t ADS_CONFIG = 0xC2E3;
-constexpr float ADS_LSB_VOLTS = 0.000125f;
-constexpr float SHUNT_OHMS = 0.091f;
+// AIN0-GND, continuo, +/-2.048 V, 860 SPS. SHUNT_OHMS = 50mohm.
+// Con 50mohm + G=20 a 1A da V_out~1.0V. Resolucion 62.5 uV/LSB.
+constexpr uint16_t ADS_CONFIG = 0xC4E3;
+constexpr float ADS_LSB_VOLTS = 0.0000625f;
+constexpr float SHUNT_OHMS = 0.05f;
 constexpr float INA_GAIN = 20.0f;
 constexpr float LOAD_VOLTS = 5.0f;
 

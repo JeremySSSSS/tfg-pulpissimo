@@ -26,8 +26,7 @@ constexpr uint8_t LORA_RESET_PIN = 23;
 #endif
 
 // AIN0 to GND, continuous conversion, +/-2.048 V, 860 samples/s.
-// SHUNT_OHMS = 50mohm + G=20: la placa (~1 A) da V_out~1.01V.
-// Con esta escala queda margen y mejor resolucion. Resolucion 62.5 uV/LSB.
+// SHUNT_OHMS = 50mohm. Resolucion 62.5 uV/LSB.
 constexpr uint16_t ADS_CONFIG = 0xC4E3;
 constexpr float ADS_LSB_VOLTS = 0.0000625f;
 
@@ -45,6 +44,8 @@ enum class CaptureState {
 
 CaptureState captureState = CaptureState::WAIT_FOR_LOW;
 double powerSum = 0.0;
+double rawSum = 0.0;
+double voutSum = 0.0;
 uint32_t sampleCount = 0;
 uint32_t measurementStartMs = 0;
 
@@ -113,7 +114,7 @@ void screenIdle() {
   display.display();
 }
 
-// En medicion: promedio en curso, muestras y tiempo.
+// En medicion: estado fijo, sin mostrar promedio parcial.
 void screenMeasuring(double avg, uint32_t elapsedMs) {
   header("MIDIENDO");
   char b[26];
@@ -226,6 +227,8 @@ void loop() {
   if (captureState == CaptureState::ARMED) {
     if (syncHigh) {
       powerSum = 0.0;
+      rawSum = 0.0;
+      voutSum = 0.0;
       sampleCount = 0;
       measurementStartMs = millis();
       captureState = CaptureState::MEASURING;
@@ -239,10 +242,12 @@ void loop() {
     uint32_t durationMs = millis() - measurementStartMs;
     if (sampleCount > 0) {
       double averagePower = powerSum / sampleCount;
+      double averageRaw = rawSum / sampleCount;
+      double averageVout = voutSum / sampleCount;
       lastAvg = averagePower; haveResult = true;
       screenResult(averagePower, durationMs);
-      Serial.printf("Promedio: %.6f W, muestras: %lu, duracion: %lu ms\n",
-                    averagePower, sampleCount, durationMs);
+      Serial.printf("Promedio: %.6f W, RAW_avg: %.2f, Vout_avg: %.6f V, muestras: %lu, duracion: %lu ms\n",
+                    averagePower, averageRaw, averageVout, sampleCount, durationMs);
       uploadAverage(averagePower, durationMs, sampleCount);
       lastDispMs = millis();   // deja el resultado un rato antes del reposo
     } else {
@@ -255,12 +260,12 @@ void loop() {
   int16_t raw = readConversion();
   float vout = raw * ADS_LSB_VOLTS;
   float current = vout / (INA_GAIN * SHUNT_OHMS);
+  rawSum += raw;
+  voutSum += vout;
   powerSum += LOAD_VOLTS * current;
   sampleCount++;
 
-  // pantalla en vivo, refrescada a ~1 Hz (la I2C del OLED frena el muestreo;
-  // ~2% de muestras perdidas al azar -> sin sesgo en el promedio).
-  if (sampleCount > 0 && millis() - lastDispMs > 1000) {
+  if (millis() - lastDispMs > 1000) {
     lastDispMs = millis();
     screenMeasuring(powerSum / sampleCount, millis() - measurementStartMs);
   }

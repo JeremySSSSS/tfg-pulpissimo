@@ -92,6 +92,19 @@ module xilinx_pulpissimo (
     .O(ref_clk)
   );
 
+  // --- XADC: temperatura del die expuesta por GPIO (TFG) ---
+  // Lee la temperatura interna del Artix-7 y la deja como codigo de 12 bits en las
+  // entradas GPIO io_19..io_30. El firmware configura esos pads como GPIO input y
+  // lee el codigo (csrr/load del periferico GPIO) -> convierte a grados con la
+  // formula de Xilinx. Esas lineas (i2s/sdio/i2c) no las usa la caracterizacion.
+  wire [11:0] xadc_temp_code;   // DIAGNOSTICO empaquetado (ver xadc_temp.v)
+  xadc_temp i_xadc_temp (
+    .clk_i   ( ref_clk ),
+    .rst_ni  ( pad_reset_n ),
+    .temp_o  ( xadc_temp_code ),
+    .valid_o (  )
+  );
+
 	//JTAG TCK clock buffer (dedicated route is false in constraints)
 	// IBUF i_tck_iobuf (
 	// 	.I(pad_jtag_tck),
@@ -183,7 +196,8 @@ module xilinx_pulpissimo (
       pad_spim_sck,   // io_02
       pad_uart_rx,    // io_01
       pad_uart_tx     // io_00
-    } )
+    } ),
+    .xadc_temp_i ( xadc_temp_code )   // temperatura del die -> gpio_in io_19..30 (TFG)
   );
 
 endmodule

@@ -82,7 +82,10 @@ module pulpissimo #(
   // general purpose pads, since PULPissimo v8.0 any peripheral including
   // GPIO) can be mapped to any pad any-to-any muxing. Check the latest
   // README.md on description and how to modify the pad count)
-  inout wire [IO_PAD_COUNT-1:0] pad_io
+  inout wire [IO_PAD_COUNT-1:0] pad_io,
+  // XADC (TFG): codigo de temperatura del die (12 bits). Se inyecta en el GPIO
+  // input io_19..io_30 que ve el SoC -> el firmware lo lee como GPIO sin tocar pads.
+  input wire [11:0] xadc_temp_i
 );
 `include "soc_mem_map.svh"
 `include "apb/assign.svh"
@@ -150,6 +153,14 @@ module pulpissimo #(
   logic [IO_PAD_COUNT-1:0] s_gpio_out;
   logic [IO_PAD_COUNT-1:0] s_gpio_tx_en;
   logic [IO_PAD_COUNT-1:0] s_gpio_in;
+  // GPIO input que ve el SoC: igual al de los pads, pero io_19..io_30 traen el
+  // codigo de temperatura del XADC (TFG). Asi no se tocan los pads (sin conflicto
+  // de drivers) y el firmware lee la temperatura por el periferico GPIO.
+  logic [IO_PAD_COUNT-1:0] s_gpio_in_temp;
+  always_comb begin
+    s_gpio_in_temp          = s_gpio_in;
+    s_gpio_in_temp[30:19]   = xadc_temp_i;   // io_30..io_19 = codigo del XADC
+  end
 
   // UART
   uart_pkg::uart_to_pad_t [udma_cfg_pkg::N_UART-1:0] s_uart_to_pad;
@@ -420,8 +431,8 @@ module pulpissimo #(
     .timer_ch2_o ( s_timer_ch2 ),
     .timer_ch3_o ( s_timer_ch3 ),
 
-    // GPIO
-    .gpio_i       ( s_gpio_in    ),
+    // GPIO  (gpio_i con la temperatura del XADC inyectada en io_19..io_30, TFG)
+    .gpio_i       ( s_gpio_in_temp ),
     .gpio_o       ( s_gpio_out   ),
     .gpio_tx_en_o ( s_gpio_tx_en ),
 

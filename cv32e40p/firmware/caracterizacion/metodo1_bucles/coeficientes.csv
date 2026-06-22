@@ -1,0 +1,10 @@
+# Metodo 1 (bucles homogeneos). Generado 2026-06-19 00:42:44.,coef=(P_cat-P_idle)*T/n; div usa DIVCYC.
+parametro,coef,unidad
+P_idle,9.142861,W
+alu,2.051167e-09,J/instr
+mul,1.315234e-09,J/instr
+mulh,3.547552e-09,J/instr
+div,5.314952e-10,J/ciclo
+mem,2.228582e-09,J/instr
+ctrl,2.438853e-09,J/instr
+float,2.679075e-09,J/instr

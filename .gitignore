@@ -1,0 +1,12 @@
+# binarios y artefactos de build (firmware)
+*.elf
+*.dis
+*.o
+*.bin
+# cache de python
+__pycache__/
+*.pyc
+# backups / temporales
+*.bak
+*.swp
+*~

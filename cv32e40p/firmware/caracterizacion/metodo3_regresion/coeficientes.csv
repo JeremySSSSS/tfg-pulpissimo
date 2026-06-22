@@ -1,0 +1,10 @@
+"# Metodo 3 (regresion lineal, EfiMon). Generado 2026-06-21 20:16:15. P_idle FIJO de 'idle medido en sesion (9.1135 W)' (no es incognita); SIN intercepto: delta=P_med-P_idle = sum e_i*(n_i/T). n=13 corridas, R2(vs0)=0.9930, RMSE=1.32 mW, cond=7.5"
+parametro,coef,unidad
+P_idle,9.113478,W
+alu,1.908877e-09,J/instr
+mul,7.648683e-10,J/instr
+mulh,6.295651e-09,J/instr
+div,3.673364e-10,J/ciclo
+mem,2.637412e-09,J/instr
+ctrl,6.202765e-09,J/instr
+float,3.058188e-09,J/instr

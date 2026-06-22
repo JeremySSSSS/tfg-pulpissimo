@@ -10,17 +10,30 @@ El ESP32 sigue subiendo a 'inbox' (default del Apps Script) sin cambios.
 """
 import csv
 import io
+import time
+import urllib.error
 import urllib.parse
 import urllib.request
 
 # URL del Web App (/exec). Actualizar tras redeployar el Apps Script.
 SCRIPT_URL = "https://script.google.com/macros/s/REDACTED/exec"
 
+REINTENTOS = 4   # el Apps Script da 500 transitorios (cold start, crear pestaña)
+
 
 def _get(params):
+    """GET al Web App con reintentos. El Apps Script lanza 500 transitorios
+    (arranque en frio, insertSheet la 1.ra vez) -> reintenta con backoff."""
     url = f"{SCRIPT_URL}?{urllib.parse.urlencode(params)}"
-    with urllib.request.urlopen(url, timeout=30) as r:
-        return r.read().decode("utf-8")
+    for intento in range(1, REINTENTOS + 1):
+        try:
+            with urllib.request.urlopen(url, timeout=30) as r:
+                return r.read().decode("utf-8")
+        except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError) as e:
+            if intento == REINTENTOS:
+                raise
+            print(f"    [sheet] {e} (intento {intento}/{REINTENTOS}); reintento...")
+            time.sleep(2 * intento)
 
 
 def subir(hoja, **campos):

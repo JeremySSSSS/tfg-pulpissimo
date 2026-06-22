@@ -65,31 +65,39 @@ def main():
     fcsv = open(VERIF_CSV, "a", newline="")
     wr = csv.writer(fcsv)
     if new:
-        wr.writerow(["fecha", "metodo", "programa", "T_s", "P_med_W", "P_pred_W", "err_pct"]
+        wr.writerow(["fecha", "metodo", "programa", "T_s", "P_med_W", "P_pred_W", "err_pct", "temp_C"]
                     + modelo.COLS_CONTADORES)
 
     seen = len(sheet.leer("inbox"))
-    print(f"{'programa':12s} {'P_med[W]':>9s} {'P_pred[W]':>10s} {'err%':>7s}  T[s]")
+    print(f"{'programa':12s} {'P_med[W]':>9s} {'P_din[W]':>9s} {'P_pred[W]':>10s} {'err%':>7s}  T[s]")
     errs = []
     for prog in args.programas:
         elf = find_elf(prog)
-        print(f"==> corriendo {prog} por JTAG...")
-        w = [modelo.to_int(x) for x in jtag.run_one(elf)]
-        fila, seen = esperar_inbox(seen)
-        pbar = float(fila["p_avg"].replace(",", "."))
+        print(f"==> corriendo {prog} por JTAG (hasta 3x, me quedo con la limpia)...")
+
+        def get_pavg():
+            nonlocal seen
+            fila, seen = esperar_inbox(seen)
+            return float(str(fila["p_avg"]).replace(",", "."))
+
+        words, pbar = jtag.run_one_limpio(elf, get_pavg)
+        w = [modelo.to_int(x) for x in words]
         T = ((w[17] - w[16]) & modelo.MASK32) / modelo.F_CLK
-        P_pred = modelo.predecir(w, P_idle, coef)
+        P_din = modelo.potencia_dinamica(w, coef)   # el modelo (dinamica)
+        P_pred = P_idle + P_din                     # total: idle se suma aqui, al final
         err = 100 * (P_pred - pbar) / pbar
         errs.append(abs(err))
         cont = modelo.contadores(w)
+        tC = jtag.ultima_temp_cC                      # temperatura del die (XADC)
+        tstr = f"{tC/100:.2f}" if tC is not None else ""
         ts = time.strftime("%Y-%m-%d %H:%M:%S")
         sheet.subir("verificacion", metodo=met, programa=prog, T_s=f"{T:.3f}",
                     P_med_W=f"{pbar:.6f}", P_pred_W=f"{P_pred:.6f}", err_pct=f"{err:.4f}",
-                    **{k: cont[k] for k in modelo.COLS_CONTADORES})
-        wr.writerow([ts, met, prog, f"{T:.3f}", f"{pbar:.6f}", f"{P_pred:.6f}", f"{err:.4f}"]
+                    temp_C=tstr, **{k: cont[k] for k in modelo.COLS_CONTADORES})
+        wr.writerow([ts, met, prog, f"{T:.3f}", f"{pbar:.6f}", f"{P_pred:.6f}", f"{err:.4f}", tstr]
                     + [cont[k] for k in modelo.COLS_CONTADORES])
         fcsv.flush()
-        print(f"{prog:12s} {pbar:9.4f} {P_pred:10.4f} {err:7.2f}  {T:5.1f}")
+        print(f"{prog:12s} {pbar:9.4f} {P_din:9.4f} {P_pred:10.4f} {err:7.2f}  {T:5.1f}  {tstr}C")
 
     fcsv.close()
     if errs:

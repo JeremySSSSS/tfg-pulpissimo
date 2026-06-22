@@ -4,12 +4,24 @@ coeficientes de CUALQUIER metodo (bucles / chopper / regresion), porque los 3
 guardan su coeficientes.csv en el MISMO formato:
 
     parametro, coef, unidad
-    P_idle,    5.0549,   W
+    P_idle,    5.0549,   W           # NO es coef del modelo: es el piso estatico
     alu,       2.009e-9, J/instr
     ...
     div,       3.40e-10, J/ciclo      # hibrido: por ciclo de DIVCYC
 
-Modelo:  P = P_idle + ( sum_i coef_i*n_i + coef_div*c_div ) / T
+El MODELO es de potencia DINAMICA: sus coeficientes (J/instr, J/ciclo) son la
+energia que cada instruccion gasta POR ENCIMA del reposo, y ya vienen limpios de
+idle (los 3 metodos los derivan de un delta con el idle restado):
+
+    P_dinamica = ( sum_i coef_i*n_i + coef_div*c_div ) / T
+
+La potencia ESTATICA (P_idle) es un termino APARTE. La potencia TOTAL aproximada
+suma el idle SOLO al final:
+
+    P_total = P_idle + P_dinamica
+
+P_idle se guarda en coeficientes.csv solo como referencia del piso estatico
+(distinguido por unidad: W vs J/instr|J/ciclo), no como coeficiente del modelo.
 n_i de los contadores del clasificador; c_div = DIVCYC; T = mcycle/f.
 """
 import csv
@@ -49,12 +61,19 @@ def cargar_coeficientes(path):
     return P_idle, coef
 
 
-def predecir(w, P_idle, coef):
-    """P_pred [W] de un run (w = 18 words de 'results')."""
+def potencia_dinamica(w, coef):
+    """P DINAMICA [W] del run (w = 18 words de 'results'). Es el MODELO en si:
+    energia de las instrucciones / T. SIN idle."""
     T_cyc = (w[17] - w[16]) & MASK32
     E = sum(coef.get(c, 0.0) * val(w, WLO[c]) for c in INSTR)   # por instruccion
     E += coef.get("div", 0.0) * val(w, WLO["divcyc"])           # div por ciclo
-    return P_idle + E / (T_cyc / F_CLK)
+    return E / (T_cyc / F_CLK)
+
+
+def predecir(w, P_idle, coef):
+    """P TOTAL aprox [W] = P_idle (estatica) + P dinamica. El idle se suma SOLO
+    aqui, al final del calculo; el modelo en si (potencia_dinamica) es dinamico."""
+    return P_idle + potencia_dinamica(w, coef)
 
 
 def contadores(w):
