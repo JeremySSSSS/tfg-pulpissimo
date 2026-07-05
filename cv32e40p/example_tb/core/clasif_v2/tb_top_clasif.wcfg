@@ -17,45 +17,53 @@
       </db_ref>
    </db_ref_list>
    <zoom_setting>
-      <ZoomStartTime time="200,059,993 ps"></ZoomStartTime>
-      <ZoomEndTime time="200,060,002 ps"></ZoomEndTime>
-      <Cursor1Time time="200,059,993 ps"></Cursor1Time>
+      <ZoomStartTime time="14,893,328.572 ns"></ZoomStartTime>
+      <ZoomEndTime time="14,894,864.887 ns"></ZoomEndTime>
+      <Cursor1Time time="14,894,798.920 ns"></Cursor1Time>
    </zoom_setting>
    <column_width_setting>
-      <NameColumnWidth column_width="254"></NameColumnWidth>
-      <ValueColumnWidth column_width="124"></ValueColumnWidth>
+      <NameColumnWidth column_width="410"></NameColumnWidth>
+      <ValueColumnWidth column_width="201"></ValueColumnWidth>
    </column_width_setting>
    <WVObjectSize size="8" />
    <wvobject type="array" fp_name="/tb_top/wrapper_i/wrapper_i/core_i/insn_classifier_i/alu_q">
       <obj_property name="ElementShortName">alu_q[63:0]</obj_property>
       <obj_property name="ObjectShortName">alu_q[63:0]</obj_property>
+      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
    </wvobject>
    <wvobject type="array" fp_name="/tb_top/wrapper_i/wrapper_i/core_i/insn_classifier_i/mul_q">
       <obj_property name="ElementShortName">mul_q[63:0]</obj_property>
       <obj_property name="ObjectShortName">mul_q[63:0]</obj_property>
+      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
    </wvobject>
    <wvobject type="array" fp_name="/tb_top/wrapper_i/wrapper_i/core_i/insn_classifier_i/mulh_q">
       <obj_property name="ElementShortName">mulh_q[63:0]</obj_property>
       <obj_property name="ObjectShortName">mulh_q[63:0]</obj_property>
+      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
    </wvobject>
    <wvobject type="array" fp_name="/tb_top/wrapper_i/wrapper_i/core_i/insn_classifier_i/div_q">
       <obj_property name="ElementShortName">div_q[63:0]</obj_property>
       <obj_property name="ObjectShortName">div_q[63:0]</obj_property>
+      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
    </wvobject>
    <wvobject type="array" fp_name="/tb_top/wrapper_i/wrapper_i/core_i/insn_classifier_i/mem_q">
       <obj_property name="ElementShortName">mem_q[63:0]</obj_property>
       <obj_property name="ObjectShortName">mem_q[63:0]</obj_property>
+      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
    </wvobject>
    <wvobject type="array" fp_name="/tb_top/wrapper_i/wrapper_i/core_i/insn_classifier_i/ctrl_q">
       <obj_property name="ElementShortName">ctrl_q[63:0]</obj_property>
       <obj_property name="ObjectShortName">ctrl_q[63:0]</obj_property>
+      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
    </wvobject>
    <wvobject type="array" fp_name="/tb_top/wrapper_i/wrapper_i/core_i/insn_classifier_i/float_q">
       <obj_property name="ElementShortName">float_q[63:0]</obj_property>
       <obj_property name="ObjectShortName">float_q[63:0]</obj_property>
+      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
    </wvobject>
    <wvobject type="array" fp_name="/tb_top/wrapper_i/wrapper_i/core_i/insn_classifier_i/divcyc_q">
       <obj_property name="ElementShortName">divcyc_q[63:0]</obj_property>
       <obj_property name="ObjectShortName">divcyc_q[63:0]</obj_property>
+      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
    </wvobject>
 </wave_config>
