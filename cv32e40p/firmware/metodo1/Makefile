@@ -13,7 +13,7 @@ MIXES := mix1 mix2 mix3
 # Programas REALES (benchmarks): kernel C + harness.S. aes=crypto, dijkstra=grafos.
 # Mezcla natural de instrucciones que decide el compilador. (nbody descartado:
 # este bitstream se traba con cadenas seriales de dependencia FP, ver fir/dotprod.)
-REAL := aes dijkstra
+REAL := aes dijkstra sha256 primes mandel conv
 ELFS  := $(addsuffix .elf,$(CATS)) $(addsuffix .elf,$(MIXES)) $(addsuffix .elf,$(REAL))
 
 FLAGS := -nostdlib -nostartfiles -static -Os -g -mabi=ilp32 \
@@ -42,6 +42,14 @@ aes.elf:      harness.S wl_aes.c      platform.inc link.ld
 	$(CC) $(KFLAGS) -march=rv32imc  -DREPS=150000 -o $@ harness.S wl_aes.c
 dijkstra.elf: harness.S wl_dijkstra.c platform.inc link.ld
 	$(CC) $(KFLAGS) -march=rv32imc  -DREPS=4000 -o $@ harness.S wl_dijkstra.c
+sha256.elf:   harness.S wl_sha256.c   platform.inc link.ld
+	$(CC) $(KFLAGS) -march=rv32imc  -DREPS=70000 -o $@ harness.S wl_sha256.c
+primes.elf:   harness.S wl_primes.c   platform.inc link.ld
+	$(CC) $(KFLAGS) -march=rv32imc  -DREPS=60 -o $@ harness.S wl_primes.c
+mandel.elf:   harness.S wl_mandel.c   platform.inc link.ld
+	$(CC) $(KFLAGS) -march=rv32imfc -mabi=ilp32 -DREPS=35 -o $@ harness.S wl_mandel.c
+conv.elf:     harness.S wl_conv.c     platform.inc link.ld
+	$(CC) $(KFLAGS) -march=rv32imc  -DREPS=22000 -o $@ harness.S wl_conv.c
 
 disassemble: all
 	@for elf in $(ELFS); do \

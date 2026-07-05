@@ -47,3 +47,16 @@ python3 regresion.py
 
 Los coeficientes escalan con los ciclos por categoría (la estática a 10 MHz
 domina); el modelo predice el consumo total de programas reales a ±5 %.
+
+## Validación held-out (programa nuevo, no usado en la calibración)
+
+`mixed_validation.S` → `valid.elf`: mezcla fija de las 7 categorías por
+iteración (8 ALU, 4 MUL, 2 MULH, 2 DIV/REM, 4 MEM, 4 CTRL, 4 FLOAT),
+`LOOP_COUNT` = `VALID_LOOP_COUNT` (1.5M, ~10 s a 10 MHz).
+
+1. `make valid.elf`
+2. Cargar por JTAG, medir `P_avg` durante la ventana GPIO8 y leer
+   `x/18xw &results`.
+3. Agregar la fila a `runs_valid.csv` (mismo formato que `runs.csv`).
+4. `python3 validate.py` — ajusta `e_i` con `runs.csv` (sin tocar
+   `valid`) y compara `E_est` vs `E_med` para la corrida nueva.

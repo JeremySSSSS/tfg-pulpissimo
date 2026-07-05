@@ -1,0 +1,8 @@
+"# Potencia dinamica del core CV32E40P aislado, OOC synth + SAIF + report_power @10 MHz"
+categoria,P_din_sim_W,P_din_sim_mW
+alu,0.0080,8.0
+mul,0.0060,6.0
+mulh,0.0040,4.0
+div,0.0040,4.0
+mem,0.0050,5.0
+ctrl,0.0050,5.0

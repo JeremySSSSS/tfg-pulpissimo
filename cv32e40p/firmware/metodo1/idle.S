@@ -1,5 +1,8 @@
-// M1 - linea base IDLE.  ~5 min a 10 MHz (750M iter x ~4 cic/iter).
-// Bucle vacio: solo el control (addi/bnez). Da P_idle (baseline), sin coeficiente.
+// M1 - linea base IDLE PASIVA.  ~5 min a 10 MHz (3M iter x ~1003 cic/iter).
+// Referencia pasiva: bloque de 1000 NOPs (operandos constantes -> no togglean el
+// datapath) con saltos RAROS (1 cada 1000 -> sin flush). Mucho mas cerca de la
+// estatica pura que un bucle de saltos. Da P_idle (baseline), sin coeficiente.
+// Consistente con la fase idle del chopper.
 // Ventana de medicion = flanco de GPIO8 (-> ESP32). Vuelca 16 CSR + mcycle a 'results'.
 #include "platform.inc"
 
@@ -18,12 +21,15 @@ _start:
     csrci 0x320, 1                  // habilita mcycle
 
     reset_category_counters
-    li s0, 750000000                // LOOP_COUNT
+    li s0, 3000000                  // LOOP_COUNT (con 1000 NOPs/iter -> ~5 min)
 
     gpio_high
 
     csrr s1, mcycle
 measurement_loop:
+    .rept 1000
+    nop
+    .endr
     addi s0, s0, -1
     bnez s0, measurement_loop
     csrr s2, mcycle

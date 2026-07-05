@@ -15,6 +15,7 @@ DIV_LOOP_COUNT   ?= 90000
 MULH_LOOP_COUNT  ?= 500000
 CTRL_LOOP_COUNT  ?= 700000
 FLOAT_LOOP_COUNT ?= 1500000
+VALID_LOOP_COUNT ?= 1500000
 
 COMMON_FLAGS := -nostdlib -nostartfiles -static -Os -g -mabi=ilp32 \
 	-Wl,-T,link.ld -Wl,--build-id=none -I.
@@ -23,7 +24,7 @@ COMMON_FLAGS := -nostdlib -nostartfiles -static -Os -g -mabi=ilp32 \
 INT_CATS := alu mul mulh div mem ctrl idle
 INT_ELFS := $(addsuffix .elf,$(INT_CATS))
 # Cargas REALES (Metodo 2): programas con mezcla natural de instrucciones.
-WL_ELFS  := sort.elf matmul.elf crc.elf strings.elf gcd.elf fir.elf
+WL_ELFS  := sort.elf matmul.elf crc.elf strings.elf gcd.elf fir.elf bsearch.elf dotprod.elf
 ALL_ELFS := $(INT_ELFS) float.elf $(WL_ELFS)
 
 # Macro -DCATEGORY_<X> por target.
@@ -69,8 +70,15 @@ strings.elf: harness.S wl_strings.c platform.inc link.ld
 	$(CC) $(KFLAGS) -march=rv32imc  -DREPS=200000 -o $@ harness.S wl_strings.c
 gcd.elf:     harness.S wl_gcd.c     platform.inc link.ld
 	$(CC) $(KFLAGS) -march=rv32imc  -DREPS=30000  -o $@ harness.S wl_gcd.c
+valid.elf: mixed_validation.S platform.inc link.ld
+	$(CC) $(COMMON_FLAGS) -march=rv32imfc \
+		-DLOOP_COUNT=$(VALID_LOOP_COUNT) -o $@ mixed_validation.S
 fir.elf:     harness.S wl_fir.c     platform.inc link.ld
 	$(CC) $(KFLAGS) -march=rv32imfc -ffp-contract=off -DREPS=2000 -o $@ harness.S wl_fir.c
+bsearch.elf: harness.S wl_bsearch.c platform.inc link.ld
+	$(CC) $(KFLAGS) -march=rv32imc  -DREPS=2000000 -o $@ harness.S wl_bsearch.c
+dotprod.elf: harness.S wl_dotprod.c platform.inc link.ld
+	$(CC) $(KFLAGS) -march=rv32imfc -ffp-contract=off -DREPS=120000 -o $@ harness.S wl_dotprod.c
 
 disassemble: all
 	@for elf in $(ALL_ELFS); do \

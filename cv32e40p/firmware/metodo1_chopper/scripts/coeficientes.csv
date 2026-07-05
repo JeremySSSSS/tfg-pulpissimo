@@ -1,0 +1,10 @@
+# Coeficientes del modelo de potencia. coef = e_dyn [J/instr] salvo div (p_div [J/ciclo]). Derivados de chopper_results.csv + cpi_categorias.csv
+parametro,delta_W,CPI,coef,unidad,reps
+P_idle,,,5.054853,W,
+alu,0.019861,1.0117,2.009337e-09,J/instr,1
+mul,0.009056,1.0156,9.197274e-10,J/instr,1
+mulh,0.004960,5.0156,2.487738e-09,J/instr,1
+div,0.003400,,3.400000e-10,J/ciclo,1
+mem,0.009033,2.0117,1.817169e-09,J/instr,1
+ctrl,0.008809,2.0078,1.768671e-09,J/instr,1
+float,0.016590,1.2656,2.099630e-09,J/instr,1

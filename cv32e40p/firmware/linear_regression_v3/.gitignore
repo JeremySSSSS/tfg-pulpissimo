@@ -1,0 +1,5 @@
+*.elf
+*.dis
+coefficients.csv
+
+__pycache__/

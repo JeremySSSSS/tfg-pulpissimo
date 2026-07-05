@@ -1,0 +1,8 @@
+# Validacion held-out: corridas NO usadas en la calibracion (runs.csv).
+# Mismo formato: name,P_avg_W,w0..w17  (x/18xw &results)
+#
+# valid.elf (mixed_validation.S): mezcla fija de las 7 categorias por
+# iteracion (8 ALU, 4 MUL, 2 MULH, 2 DIV/REM, 4 MEM, 4 CTRL, 4 FLOAT),
+# LOOP_COUNT=1.5M (~10 s a 10 MHz).
+name,P_avg_W,w0,w1,w2,w3,w4,w5,w6,w7,w8,w9,w10,w11,w12,w13,w14,w15,w16,w17
+valid,5.053277,0x00cdfe6d,0x00000000,0x005b8d80,0x00000000,0x002dc6c0,0x00000000,0x002dc6c0,0x00000000,0x005b8d82,0x00000000,0x007270df,0x00000000,0x005b8d80,0x00000000,0x03c14dc0,0x00000000,0x4402b86a,0x4bf7c4cc
