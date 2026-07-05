@@ -76,3 +76,17 @@ es el fall-through (pc+2/pc+4).
   hardware — riesgo conocido fpnew+XSim).
 - Cargas mixtas largas y secuencias aleatorias para regresión.
 - Test de overflow LO→HI (escribir 0xFFFFFFFF en LO y verificar carry).
+
+## Regresión pseudoaleatoria (`clasif_rand.c`)
+
+Mezcla las 6 categorías enteras en orden impredecible (xorshift32, semilla
+fija `0xC0FFEE01` → reproducible) con operandos de división aleatorios.
+Cubre las TRANSICIONES entre categorías que los bucles dominados no
+ejercitan. Sin conteo esperado fijo: la verdad la pone el golden.
+
+    TEST=clasif_v2/clasif_rand SKIPRTL=1 MAXCYCLES=600000 ./run_clasif_v2_xsim.sh
+
+Resultado (2026-07-04): ventana de 75 471 instrucciones retiradas,
+coincidencia EXACTA en los 6 contadores (alu=47465 mul=804 mulh=717
+div=1986 mem=11239 ctrl=13260, 0 sin clasificar) y DIVCYC ciclo-exacto
+(50024, 25.2 ciclos/div promedio con operandos aleatorios). PASS.
