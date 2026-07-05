@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Verificador COMUN a los 3 metodos. Carga cualquier .elf, lo corre por JTAG,
+"""Verificador COMUN a los 2 metodos. Carga cualquier .elf, lo corre por JTAG,
 recupera el P_avg medido del Sheet (pestaña 'inbox'), y predice la potencia con
-los coeficientes del metodo elegido (--metodo bucles|chopper|regresion). Compara
+los coeficientes del metodo elegido (--metodo bucles|regresion). Compara
 predicho vs medido y lo guarda en la pestaña 'verificacion' del Sheet + un CSV local.
 
 Uso:
-    python3 verificar.py --metodo chopper sha256 md5 floyd
-    python3 verificar.py --metodo 1 aes            # 1=bucles 2=chopper 3=regresion
+    python3 verificar.py --metodo regresion sha256 md5 floyd
+    python3 verificar.py --metodo 1 aes            # 1=bucles 2=regresion
 """
 import argparse
 import csv
@@ -20,9 +20,8 @@ import sheet      # noqa: E402
 import modelo     # noqa: E402
 import jtag       # noqa: E402
 
-METODOS = {"bucles": "metodo1_bucles", "chopper": "metodo2_chopper",
-           "regresion": "metodo3_regresion"}
-ALIAS = {"1": "bucles", "2": "chopper", "3": "regresion"}
+METODOS = {"bucles": "bucles", "regresion": "regresion"}
+ALIAS = {"1": "bucles", "2": "regresion"}
 VERIF_CSV = os.path.join(HERE, "verificacion.csv")
 
 
@@ -33,26 +32,15 @@ def find_elf(prog):
     raise FileNotFoundError(f"{prog}.elf no esta en benchmarks/ (ni es una ruta valida)")
 
 
-def esperar_inbox(seen, timeout=180):
-    t0 = time.time()
-    while time.time() - t0 < timeout:
-        filas = sheet.leer("inbox")
-        if len(filas) > seen:
-            return filas[-1], len(filas)
-        print(f"    esperando P_avg del ESP32... ({time.time()-t0:4.0f}s/{timeout}s)")
-        time.sleep(3)
-    raise TimeoutError("timeout esperando fila nueva en 'inbox'")
-
-
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--metodo", required=True, help="bucles|chopper|regresion (o 1|2|3)")
+    ap.add_argument("--metodo", required=True, help="bucles|regresion (o 1|2)")
     ap.add_argument("programas", nargs="+")
     args = ap.parse_args()
 
     met = ALIAS.get(args.metodo, args.metodo)
     if met not in METODOS:
-        sys.exit(f"metodo invalido: {args.metodo}  (usa bucles|chopper|regresion o 1|2|3)")
+        sys.exit(f"metodo invalido: {args.metodo}  (usa bucles|regresion o 1|2)")
     coef_path = os.path.join(HERE, METODOS[met], "coeficientes.csv")
     if not os.path.exists(coef_path):
         sys.exit(f"falta {coef_path} -> caracteriza primero con metodo {met}")
@@ -68,19 +56,13 @@ def main():
         wr.writerow(["fecha", "metodo", "programa", "T_s", "P_med_W", "P_pred_W", "err_pct", "temp_C"]
                     + modelo.COLS_CONTADORES)
 
-    seen = len(sheet.leer("inbox"))
+    inbox = sheet.Inbox()
     print(f"{'programa':12s} {'P_med[W]':>9s} {'P_din[W]':>9s} {'P_pred[W]':>10s} {'err%':>7s}  T[s]")
     errs = []
     for prog in args.programas:
         elf = find_elf(prog)
-        print(f"==> corriendo {prog} por JTAG (hasta 3x, me quedo con la limpia)...")
-
-        def get_pavg():
-            nonlocal seen
-            fila, seen = esperar_inbox(seen)
-            return float(str(fila["p_avg"]).replace(",", "."))
-
-        words, pbar = jtag.run_one_limpio(elf, get_pavg)
+        print(f"==> corriendo {prog} por JTAG (hasta 5x, me quedo con la limpia)...")
+        words, pbar = jtag.run_one_limpio(elf, inbox.get_pavg)
         w = [modelo.to_int(x) for x in words]
         T = ((w[17] - w[16]) & modelo.MASK32) / modelo.F_CLK
         P_din = modelo.potencia_dinamica(w, coef)   # el modelo (dinamica)

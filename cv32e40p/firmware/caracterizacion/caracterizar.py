@@ -1,0 +1,361 @@
+#!/usr/bin/env python3
+"""Caracterizacion de coeficientes energeticos — script UNICO para los 2 metodos:
+
+  bucles    (M1): un bucle dominado por categoria, aislada contra idle.
+                  coef_i = (P_cat - P_idle) * T / n_i   (div usa DIVCYC)
+  regresion (M2): programas mixtos reales; regresion SIN intercepto con P_idle
+                  FIJO:  P_med - P_idle = sum e_i * (n_i / T)
+
+Cada metodo guarda datos.csv y coeficientes.csv en su directorio (bucles/ o
+regresion/) y sube a su pestaña del Sheet. verificar.py consume esos
+coeficientes.csv con el mismo formato comun.
+
+Uso:
+    python3 caracterizar.py bucles --repeats 2
+    python3 caracterizar.py bucles alu mul div
+    python3 caracterizar.py regresion
+    python3 caracterizar.py regresion --refit
+    python3 caracterizar.py regresion --pidle bucles
+"""
+import argparse
+import csv
+import os
+import statistics
+import subprocess
+import sys
+import time
+
+import numpy as np
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(HERE, "comun"))
+import jtag      # noqa: E402
+import modelo    # noqa: E402
+import sheet     # noqa: E402
+
+F_CLK = modelo.F_CLK
+DIR_BUCLES = os.path.join(HERE, "bucles")
+DIR_REGR = os.path.join(HERE, "regresion")
+
+# --- comun a ambos metodos -------------------------------------------------
+
+def run_make(met_dir):
+    subprocess.run(["make", "-B", "all"], cwd=os.path.join(met_dir, "fuentes"), check=True)
+
+
+def find_elf(prog, met_dir):
+    # idle.elf vive en bucles/ (es el run de referencia del piso para ambos)
+    for cand in (os.path.join(met_dir, "elf", f"{prog}.elf"),
+                 os.path.join(DIR_BUCLES, "elf", f"{prog}.elf"), prog):
+        if os.path.exists(cand):
+            return cand
+    raise FileNotFoundError(f"{prog}.elf no existe (corre 'make' en {met_dir}/fuentes)")
+
+
+def medir_uno(prog, elf, inbox):
+    """Corre un elf por JTAG y devuelve (P_med, T, contadores, temp_str)."""
+    if prog == "idle":
+        # idle (wfi) es robusto a la inflacion del JTAG (una ventana de idle
+        # inflada sigue midiendo idle) y tiene IPC~0 por diseno -> 1 corrida.
+        words = jtag.run_one(elf)
+        P_med = inbox.get_pavg()
+    else:
+        words, P_med = jtag.run_one_limpio(elf, inbox.get_pavg)
+    w = [modelo.to_int(x) for x in words]
+    cont = modelo.contadores(w)
+    T = cont["mcycle"] / F_CLK
+    tC = jtag.ultima_temp_cC                 # temperatura del die (XADC), centi-C
+    tstr = f"{tC/100:.2f}" if tC is not None else ""
+    return P_med, T, cont, tstr
+
+
+def subir_sheet(hoja, **campos):
+    try:    # la pestaña del Sheet es secundaria: datos.csv ya tiene la fila
+        sheet.subir(hoja, **campos)
+    except Exception as e:
+        print(f"    [aviso] no se pudo subir a '{hoja}' ({e}); sigo (esta en datos.csv)")
+
+
+def rotar_si_header_distinto(path, header):
+    """Si datos.csv existe con OTRO encabezado (esquema viejo), lo aparta a
+    datos_legacy_*.csv en vez de apendear filas desalineadas."""
+    if not os.path.exists(path):
+        return
+    with open(path) as f:
+        actual = next(csv.reader(f), None)
+    if actual != header:
+        legado = path.replace(".csv", time.strftime("_legacy_%Y%m%d_%H%M.csv"))
+        os.rename(path, legado)
+        print(f"[aviso] {os.path.basename(path)} tenia esquema viejo -> movido a {os.path.basename(legado)}")
+
+
+# --- metodo 1: bucles dominados ---------------------------------------------
+
+CATS = ["idle", "alu", "mul", "mulh", "div", "mem", "ctrl", "float"]
+COEF_CATS = ["alu", "mul", "mulh", "div", "mem", "ctrl", "float"]
+DENOM = {"alu": "n_alu", "mul": "n_mul", "mulh": "n_mulh", "div": "c_div",
+         "mem": "n_mem", "ctrl": "n_ctrl", "float": "n_float"}
+
+
+def cmd_bucles(args):
+    datos_csv = os.path.join(DIR_BUCLES, "datos.csv")
+    coef_csv = os.path.join(DIR_BUCLES, "coeficientes.csv")
+
+    cats = args.categorias or CATS
+    invalid = [c for c in cats if c not in CATS]
+    if invalid:
+        sys.exit(f"categorias invalidas: {', '.join(invalid)}")
+    if "idle" not in cats:
+        cats = ["idle"] + cats
+
+    if not args.no_build:
+        run_make(DIR_BUCLES)
+    for cat in cats:
+        find_elf(cat, DIR_BUCLES)
+
+    header = ["fecha", "categoria", "rep", "P_med_W", "T_s", "temp_C"] + modelo.COLS_CONTADORES
+    rotar_si_header_distinto(datos_csv, header)
+    inbox = sheet.Inbox()
+    runs = {c: [] for c in cats}
+    new = not os.path.exists(datos_csv)
+    with open(datos_csv, "a", newline="") as fd:
+        wr = csv.writer(fd)
+        if new:
+            wr.writerow(header)
+        for cat in cats:
+            elf = find_elf(cat, DIR_BUCLES)
+            for rep in range(1, args.repeats + 1):
+                extra = "(idle wfi)" if cat == "idle" else "(bucle dominado, hasta 5x limpia)"
+                print(f"==> {cat} rep {rep}/{args.repeats}  {extra}")
+                P_med, T, cont, tstr = medir_uno(cat, elf, inbox)
+                runs[cat].append({"P_med": P_med, "T": T, "cont": cont})
+                ts = time.strftime("%Y-%m-%d %H:%M:%S")
+                wr.writerow([ts, cat, rep, f"{P_med:.6f}", f"{T:.6f}", tstr]
+                            + [cont[k] for k in modelo.COLS_CONTADORES])
+                fd.flush()
+                subir_sheet("bucles", categoria=cat, rep=rep, P_med_W=f"{P_med:.6f}",
+                            T_s=f"{T:.6f}", temp_C=tstr,
+                            **{k: cont[k] for k in modelo.COLS_CONTADORES})
+                print(f"    P_med = {P_med:.4f} W   T = {T:.1f} s")
+                time.sleep(3)
+
+    P_idle = statistics.mean(r["P_med"] for r in runs["idle"])
+    coefs = {}
+    resumen = []
+    for cat in COEF_CATS:
+        if not runs.get(cat):
+            continue
+        cat_coefs, deltas, denoms = [], [], []
+        for r in runs[cat]:
+            delta = r["P_med"] - P_idle
+            denom = r["cont"][DENOM[cat]]
+            if denom <= 0:
+                raise RuntimeError(f"{cat}: denominador {DENOM[cat]} es 0")
+            cat_coefs.append(delta * r["T"] / denom)
+            deltas.append(delta)
+            denoms.append(denom)
+        coefs[cat] = statistics.mean(cat_coefs)
+        resumen.append((cat, statistics.mean(deltas), statistics.mean(denoms),
+                        coefs[cat], len(cat_coefs)))
+
+    with open(coef_csv, "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow([f"# Bucles dominados (M1). Generado {time.strftime('%Y-%m-%d %H:%M:%S')}.",
+                    "coef=(P_cat-P_idle)*T/n; div usa DIVCYC."])
+        w.writerow(["parametro", "coef", "unidad"])
+        w.writerow(["P_idle", f"{P_idle:.6f}", "W"])
+        for cat in COEF_CATS:
+            if cat in coefs:
+                unidad = "J/ciclo" if cat == "div" else "J/instr"
+                w.writerow([cat, f"{coefs[cat]:.6e}", unidad])
+
+    print(f"\nP_idle = {P_idle:.4f} W")
+    for cat, delta, denom, coef, n in resumen:
+        unidad = "J/ciclo" if cat == "div" else "J/instr"
+        print(f"  {cat:6s} delta={delta*1e3:7.3f} mW  denom={denom:.0f}  coef={coef:.6e} {unidad}  (n={n})")
+    print(f"\nGuardado: {datos_csv}, {coef_csv} + pestaña 'bucles' del Sheet.")
+
+
+# --- metodo 2: regresion con linea base fija ---------------------------------
+
+# categorias del modelo y el contador que regresiona cada una (div va por ciclo)
+DYN = ["alu", "mul", "mulh", "div", "mem", "ctrl", "float"]
+REGR = {"alu": "n_alu", "mul": "n_mul", "mulh": "n_mulh", "div": "c_div",
+        "mem": "n_mem", "ctrl": "n_ctrl", "float": "n_float"}
+DEFAULT_PROGS = ["memcpy", "fsm", "crc", "matmul", "mulhash64", "dotprod", "gcd",
+                 "modpow", "trialdiv", "fpoly", "vecscale", "histogram", "sort"]
+
+
+def cargar_pidle(fuente):
+    """fuente = 'bucles' (lee P_idle de bucles/coeficientes.csv) o un numero en W."""
+    try:
+        return float(fuente)
+    except ValueError:
+        pass
+    if fuente != "bucles":
+        sys.exit(f"--pidle invalido: {fuente} (usa medir|bucles o un numero en W)")
+    path = os.path.join(DIR_BUCLES, "coeficientes.csv")
+    P_idle, _ = modelo.cargar_coeficientes(path)
+    if P_idle is None:
+        sys.exit(f"no encontre P_idle en {path}; caracteriza primero con 'bucles'")
+    return P_idle
+
+
+def leer_datos(datos_csv):
+    """Lee las corridas de datos.csv -> [(prog, P_med, T, cont)] (para --refit)."""
+    rows = []
+    with open(datos_csv) as f:
+        for r in csv.DictReader(f):
+            cont = {k: int(r[k]) for k in modelo.COLS_CONTADORES}
+            rows.append((r["programa"], float(r["P_med_W"]), cont["mcycle"] / F_CLK, cont))
+    return rows
+
+
+def ajustar(rows, P_idle):
+    """Regresion SIN intercepto con P_idle FIJO: delta = P_med - P_idle = R @ e.
+    R[k,c] = contador_c / T (tasa). Se escalan las columnas (solo dividir por sd,
+    SIN centrar, para conservar el origen del modelo sin intercepto) y se resuelve
+    por lstsq; luego se des-escala. Devuelve (coefs, info)."""
+    R = np.array([[r[3][REGR[c]] / r[2] for c in DYN] for r in rows])
+    delta = np.array([r[1] for r in rows]) - P_idle
+    sd = R.std(0)
+    sd[sd == 0] = 1.0
+    Rs = R / sd
+    e_s, *_ = np.linalg.lstsq(Rs, delta, rcond=None)
+    e = e_s / sd
+    pred = R @ e
+    resid = delta - pred
+    ss_res = float(resid @ resid)
+    ss_tot = float(delta @ delta)                  # vs 0: no hay intercepto
+    info = {
+        "P_idle": P_idle,
+        "r2": 1 - ss_res / ss_tot if ss_tot > 0 else float("nan"),
+        "rmse": (ss_res / len(delta)) ** 0.5,
+        "cond": float(np.linalg.cond(Rs)),
+        "pred_abs": pred + P_idle,                 # P predicha absoluta por corrida
+    }
+    return dict(zip(DYN, e)), info
+
+
+def medir_regresion(progs, no_build, datos_csv):
+    """Corre cada programa por JTAG, recupera P_avg del Sheet, escribe datos.csv."""
+    if not no_build:
+        run_make(DIR_REGR)
+    elfs = {p: find_elf(p, DIR_REGR) for p in progs}
+    header = ["fecha", "programa", "P_med_W", "T_s", "temp_C"] + modelo.COLS_CONTADORES
+    rotar_si_header_distinto(datos_csv, header)
+    inbox = sheet.Inbox()
+    rows = []
+    new = not os.path.exists(datos_csv)
+    with open(datos_csv, "a", newline="") as fd:
+        wr = csv.writer(fd)
+        if new:
+            wr.writerow(header)
+        for i, prog in enumerate(progs, 1):
+            extra = "" if prog == "idle" else " (hasta 5x, me quedo con la limpia)"
+            print(f"==> [{i}/{len(progs)}] {prog} por JTAG...{extra}")
+            P_med, T, cont, tstr = medir_uno(prog, elfs[prog], inbox)
+            rows.append((prog, P_med, T, cont))
+            ts = time.strftime("%Y-%m-%d %H:%M:%S")
+            wr.writerow([ts, prog, f"{P_med:.6f}", f"{T:.6f}", tstr]
+                        + [cont[k] for k in modelo.COLS_CONTADORES])
+            fd.flush()
+            subir_sheet("regresion", programa=prog, P_med_W=f"{P_med:.6f}", T_s=f"{T:.6f}",
+                        temp_C=tstr, **{k: cont[k] for k in modelo.COLS_CONTADORES})
+            if tstr:
+                print(f"    temp die = {tstr} C")
+            print(f"    P_med = {P_med:.4f} W   T = {T:.1f} s")
+            time.sleep(3)
+    return rows
+
+
+def cmd_regresion(args):
+    datos_csv = os.path.join(DIR_REGR, "datos.csv")
+    coef_csv = os.path.join(DIR_REGR, "coeficientes.csv")
+
+    if args.refit:
+        if not os.path.exists(datos_csv):
+            sys.exit(f"no existe {datos_csv}; corre la medicion primero (sin --refit)")
+        rows = leer_datos(datos_csv)
+        print(f"--refit: {len(rows)} corridas leidas de datos.csv")
+    else:
+        progs = args.programas or DEFAULT_PROGS
+        if len(progs) < len(DYN) + 1:
+            sys.exit(f"hacen falta >= {len(DYN)+1} programas mixtos (M > 7 incognitas); "
+                     f"diste {len(progs)}")
+        # con --pidle medir, idle.elf va PRIMERO en la misma sesion (mismo piso)
+        run_list = (["idle"] + progs) if args.pidle == "medir" else progs
+        rows = medir_regresion(run_list, args.no_build, datos_csv)
+
+    # separa la corrida de referencia (idle) de las de calibracion
+    cal_rows = [r for r in rows if r[0] != "idle"]
+    idle_rows = [r for r in rows if r[0] == "idle"]
+    if args.pidle == "medir":
+        if not idle_rows:
+            sys.exit("--pidle medir pero no hay corrida 'idle' (mide sin --refit, o usa --pidle bucles)")
+        P_idle = idle_rows[-1][1]
+        fuente = f"idle medido en sesion ({P_idle:.4f} W)"
+    else:
+        P_idle = cargar_pidle(args.pidle)
+        fuente = args.pidle
+
+    if len(cal_rows) < len(DYN) + 1:
+        sys.exit(f"solo {len(cal_rows)} programas de calibracion; hacen falta >= {len(DYN)+1}")
+
+    coefs, info = ajustar(cal_rows, P_idle)
+
+    with open(coef_csv, "w", newline="") as f:
+        wc = csv.writer(f)
+        wc.writerow([f"# Regresion con linea base fija (M2). Generado {time.strftime('%Y-%m-%d %H:%M:%S')}."
+                     f" P_idle FIJO de '{fuente}' (no es incognita); SIN intercepto:"
+                     f" delta=P_med-P_idle = sum e_i*(n_i/T). n={len(cal_rows)} corridas,"
+                     f" R2(vs0)={info['r2']:.4f}, RMSE={info['rmse']*1e3:.2f} mW, cond={info['cond']:.1f}"])
+        wc.writerow(["parametro", "coef", "unidad"])
+        wc.writerow(["P_idle", f"{info['P_idle']:.6f}", "W"])
+        for c in DYN:
+            unidad = "J/ciclo" if c == "div" else "J/instr"
+            wc.writerow([c, f"{coefs[c]:.6e}", unidad])
+
+    print(f"  {len(cal_rows)} programas de calibracion:  R2(vs0)={info['r2']:.4f}  "
+          f"RMSE={info['rmse']*1e3:.2f} mW  cond={info['cond']:.1f}")
+    for c in DYN:
+        unidad = "J/ciclo" if c == "div" else "J/instr"
+        flag = "  <-- NEGATIVO (soporte debil / anti-correlacion)" if coefs[c] < 0 else ""
+        print(f"  {c:6s} {coefs[c]:+.6e} {unidad}{flag}")
+    print("\nresiduos por corrida (medido - ajustado):")
+    for (prog, P_med, _, _), pa in zip(cal_rows, info["pred_abs"]):
+        print(f"  {prog:14s} med={P_med:7.4f}  fit={pa:7.4f}  resid={(P_med-pa)*1e3:+7.2f} mW")
+    print(f"\nGuardado: {coef_csv}")
+
+
+# --- entrada ------------------------------------------------------------------
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__,
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    sub = ap.add_subparsers(dest="metodo", required=True)
+
+    ab = sub.add_parser("bucles", aliases=["1"], help="M1: bucles dominados por categoria")
+    ab.add_argument("categorias", nargs="*", default=CATS,
+                    help="categorias a medir; si se omite mide idle+7 categorias")
+    ab.add_argument("--repeats", "--repeat", type=int, default=1)
+    ab.add_argument("--no-build", action="store_true", help="no recompilar ELF antes de medir")
+    ab.set_defaults(fn=cmd_bucles)
+
+    ar = sub.add_parser("regresion", aliases=["2"], help="M2: regresion sobre programas mixtos")
+    ar.add_argument("programas", nargs="*", default=DEFAULT_PROGS,
+                    help="conjunto de calibracion; si se omite usa el por defecto")
+    ar.add_argument("--pidle", default="medir",
+                    help="P_idle FIJO: 'medir' (corre idle.elf en ESTA sesion, default), "
+                         "'bucles' (de su coeficientes.csv) o un numero en W")
+    ar.add_argument("--refit", action="store_true",
+                    help="NO mide: re-ajusta desde datos.csv (para reusar mediciones ya hechas)")
+    ar.add_argument("--no-build", action="store_true", help="no recompilar ELF antes de medir")
+    ar.set_defaults(fn=cmd_regresion)
+
+    args = ap.parse_args()
+    args.fn(args)
+
+
+if __name__ == "__main__":
+    main()

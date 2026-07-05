@@ -58,3 +58,28 @@ def ultima(hoja):
 
 def n_filas(hoja):
     return len(leer(hoja))
+
+
+def fnum(x):
+    """Numero del Sheet (locale es-ES: decimales con coma)."""
+    return float(str(x).replace(",", "."))
+
+
+class Inbox:
+    """Espera las filas que sube el ESP32 a 'inbox' (una por ventana medida).
+    Detecta fila nueva por conteo; get_pavg() bloquea hasta que aparezca."""
+
+    def __init__(self, hoja="inbox"):
+        self.hoja = hoja
+        self.seen = n_filas(hoja)
+
+    def get_pavg(self, timeout=180):
+        t0 = time.time()
+        while time.time() - t0 < timeout:
+            filas = leer(self.hoja)
+            if len(filas) > self.seen:
+                self.seen = len(filas)
+                return fnum(filas[-1]["p_avg"])
+            print(f"    esperando P_avg del ESP32... ({time.time()-t0:4.0f}s/{timeout}s)")
+            time.sleep(3)
+        raise TimeoutError(f"timeout esperando fila nueva en '{self.hoja}'")

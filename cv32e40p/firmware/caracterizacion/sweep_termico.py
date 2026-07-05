@@ -28,8 +28,8 @@ sys.path.insert(0, os.path.join(HERE, "comun"))
 import jtag    # noqa: E402
 import sheet   # noqa: E402
 
-FUENTES = os.path.join(HERE, "metodo3_regresion", "fuentes")
-ELF = os.path.join(HERE, "metodo3_regresion", "elf", "idle_sweep.elf")
+FUENTES = os.path.join(HERE, "regresion", "fuentes")
+ELF = os.path.join(HERE, "regresion", "elf", "idle_sweep.elf")
 CSV = os.path.join(HERE, "pidle_temp.csv")
 RISCV = os.environ.get("RISCV", "/home/jjsotoch/pulp/toolchain/v1.0.16-pulp-riscv-gcc-ubuntu-18")
 CC = f"{RISCV}/bin/riscv32-unknown-elf-gcc"

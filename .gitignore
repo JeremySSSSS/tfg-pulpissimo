@@ -10,3 +10,6 @@ __pycache__/
 *.bak
 *.swp
 *~
+# locks de LibreOffice y logs sueltos de latex
+.~lock.*#
+texput.log
