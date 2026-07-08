@@ -30,8 +30,10 @@ all: $(ELFS) $(OUT)/idle.elf
 
 # idle de referencia (wfi, piso pasivo) ~30 s -> da P_idle medido en sesion.
 # .S auto-contenido (su propio _start), no usa harness.S.
+# idle acortado a ~20 s (67 x 0.3 s), como el de bucles: el INA228 promedia de
+# sobra en esa ventana y el default de 1000 reps (~5 min) solo alargaba la campana
 $(OUT)/idle.elf: idle.S platform.inc link.ld
-	$(CC) $(FLAGS) -march=rv32imc -o $@ idle.S
+	$(CC) $(FLAGS) -march=rv32imc -DIDLE_REPS=67 -o $@ idle.S
 
 # enteros puros -> rv32imc
 $(OUT)/sort.elf:      harness.S wl_sort.c      platform.inc link.ld
