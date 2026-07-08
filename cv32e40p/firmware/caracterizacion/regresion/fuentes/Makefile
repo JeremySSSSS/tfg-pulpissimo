@@ -18,7 +18,7 @@ OUT   := ../elf
 #   trialdiv  div (3.o)              fpoly      float ALTO (3.o)
 #   vecscale  float / mem            histogram  mem ALTO disperso
 #   sort      mem+ctrl+alu (balance)
-BENCH := memcpy fsm crc matmul mulhash64 dotprod gcd modpow trialdiv fpoly vecscale histogram sort
+BENCH := memcpy fsm crc matmul mulhash64 mulhscale dotprod gcd modpow trialdiv radix fpoly vecscale histogram sort
 ELFS  := $(addprefix $(OUT)/,$(addsuffix .elf,$(BENCH)))
 
 FLAGS  := -nostdlib -nostartfiles -static -Os -g -mabi=ilp32 \
@@ -55,6 +55,11 @@ $(OUT)/mulhash64.elf: harness.S wl_mulhash64.c platform.inc link.ld
 	$(CC) $(KFLAGS) -march=rv32imc  -DREPS=80000   -o $@ harness.S wl_mulhash64.c
 $(OUT)/trialdiv.elf:  harness.S wl_trialdiv.c  platform.inc link.ld
 	$(CC) $(KFLAGS) -march=rv32imc  -DREPS=40000   -o $@ harness.S wl_trialdiv.c
+# decorrelacion 2: mulh SIN mul (rompe la pareja) + div con perfil mem
+$(OUT)/mulhscale.elf: harness.S wl_mulhscale.c platform.inc link.ld
+	$(CC) $(KFLAGS) -march=rv32imc  -DREPS=120000  -o $@ harness.S wl_mulhscale.c
+$(OUT)/radix.elf:     harness.S wl_radix.c     platform.inc link.ld
+	$(CC) $(KFLAGS) -march=rv32imc  -DREPS=30000   -o $@ harness.S wl_radix.c
 
 # con float -> rv32imfc + -ffp-contract=off (sin fmadd; ops INDEPENDIENTES)
 $(OUT)/dotprod.elf:   harness.S wl_dotprod.c   platform.inc link.ld
