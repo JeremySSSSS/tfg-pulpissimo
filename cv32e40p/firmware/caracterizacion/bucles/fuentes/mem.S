@@ -1,4 +1,4 @@
-// M1 - bucle dominado MEM.  ~5 min a 10 MHz (5.75M iter x 256 instr/iter).
+// M1 - bucle dominado MEM.  ~20 s a 10 MHz (5.75M iter x 256 instr/iter).
 // 128 sw + 128 lw sobre un buffer en L2 (32 rept x 8) por iteracion + addi/bnez.
 // Desenrollado x4 (vs 64) para que el overhead addi/bnez pese 1-en-256 (0.4%).
 // Ventana de medicion = flanco de GPIO8 (-> ESP32). Vuelca 16 CSR + mcycle a 'results'.
@@ -19,7 +19,7 @@ _start:
     csrci 0x320, 1                  // habilita mcycle
 
     reset_category_counters
-    li s0, 5750000                  // LOOP_COUNT
+    li s0, 383000                  // LOOP_COUNT
 
     gpio_high
 

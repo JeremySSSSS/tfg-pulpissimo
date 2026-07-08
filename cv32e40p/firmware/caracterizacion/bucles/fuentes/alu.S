@@ -1,4 +1,4 @@
-// M1 - bucle dominado ALU.  ~5 min a 10 MHz (11.25M iter x 256 instr/iter).
+// M1 - bucle dominado ALU.  ~20 s a 10 MHz (11.25M iter x 256 instr/iter).
 // 256 add/xor/slli por iteracion (ALU simple, 1 ciclo) + addi/bnez de control.
 // Desenrollado x4 (vs 64) para que el overhead addi/bnez pese 1-en-256 (0.4%).
 // Ventana de medicion = flanco de GPIO8 (-> ESP32). Al final vuelca los 16 CSR
@@ -20,7 +20,7 @@ _start:
     csrci 0x320, 1                  // habilita mcycle (mcountinhibit.CY = 0)
 
     reset_category_counters
-    li s0, 11250000                 // LOOP_COUNT
+    li s0, 750000                 // LOOP_COUNT
 
     gpio_high                       // abre la ventana medida
 

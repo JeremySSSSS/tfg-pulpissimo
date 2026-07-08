@@ -1,4 +1,4 @@
-// M1 - bucle dominado MUL.  ~5 min a 10 MHz (11.25M iter x 256 instr/iter).
+// M1 - bucle dominado MUL.  ~20 s a 10 MHz (11.25M iter x 256 instr/iter).
 // 256 mul (MAC32, 1 ciclo) por iteracion + addi/bnez de control.
 // Desenrollado x4 (vs 64) para que el overhead addi/bnez pese 1-en-256 (0.4%).
 // Ventana de medicion = flanco de GPIO8 (-> ESP32). Vuelca 16 CSR + mcycle a 'results'.
@@ -19,7 +19,7 @@ _start:
     csrci 0x320, 1                  // habilita mcycle
 
     reset_category_counters
-    li s0, 11250000                 // LOOP_COUNT
+    li s0, 750000                 // LOOP_COUNT
 
     gpio_high
 

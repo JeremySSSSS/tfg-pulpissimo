@@ -1,4 +1,4 @@
-// M1 - bucle dominado FLOAT.  ~5 min a 10 MHz (9M iter x 256 instr/iter).
+// M1 - bucle dominado FLOAT.  ~20 s a 10 MHz (9M iter x 256 instr/iter).
 // 256 fadd/fmul/fsub/fmax INDEPENDIENTES (operandos ft0/ft1 fijos, sin cadena
 // serial ni fmadd -> pipelinean ~1.3 cic/op) por iteracion + addi/bnez.
 // Requiere -march=rv32imfc. Vuelca 16 CSR + mcycle a 'results'.
@@ -25,7 +25,7 @@ _start:
     flw ft1, 4(t0)
 
     reset_category_counters
-    li s0, 9000000                  // LOOP_COUNT
+    li s0, 600000                  // LOOP_COUNT
 
     gpio_high
 

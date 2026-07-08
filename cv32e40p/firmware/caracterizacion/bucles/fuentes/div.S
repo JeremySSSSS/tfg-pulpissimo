@@ -1,4 +1,4 @@
-// M1 - bucle dominado DIV.  ~5 min a 10 MHz (557.5k iter x 256 instr/iter).
+// M1 - bucle dominado DIV.  ~20 s a 10 MHz (557.5k iter x 256 instr/iter).
 // 256 div/divu/rem/remu (divisor serial, data-dependent ~21 cic/div) por iteracion.
 // Desenrollado x4 (vs 64) para que el overhead addi/bnez pese 1-en-256 (0.4%).
 // El coeficiente de esta categoria es p_div (pJ/CICLO de DIVCYC), modelo hibrido.
@@ -20,7 +20,7 @@ _start:
     csrci 0x320, 1                  // habilita mcycle
 
     reset_category_counters
-    li s0, 557500                   // LOOP_COUNT
+    li s0, 37000                   // LOOP_COUNT
 
     gpio_high
 
