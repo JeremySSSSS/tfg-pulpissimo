@@ -58,6 +58,38 @@ def ninstr_de(words):
     return sum(w[i] + (w[i + 1] << 32) for i in (0, 2, 4, 6, 8, 10, 12))
 
 
+# Lectura de temperatura SIN correr ningun elf: haltea el core (el modulo de
+# depuracion queda como maestro del bus), habilita las entradas GPIO del XADC y
+# lee el codigo. No carga ni resetea nada; la proxima corrida hace reset igual.
+GDB_TEMP_SCRIPT = """\
+set pagination off
+set confirm off
+target remote :3333
+monitor halt
+set {unsigned int}0x1A10100C = 0
+set {unsigned int}0x1A101080 = {unsigned int}0x1A101080 | 0x7ff80000
+printf "TEMPCODE %u\\n", ({unsigned int}0x1A101100 >> 19) & 0xfff
+detach
+"""
+
+
+def leer_temp():
+    """Temperatura del die [C] leida por JTAG via XADC, sin ejecutar programa.
+    None si no se pudo leer (sin OpenOCD, bitstream sin XADC -> codigo 0)."""
+    for _ in range(2):
+        try:
+            out = subprocess.run([GDB_BIN, "-n", "-q"], input=GDB_TEMP_SCRIPT,
+                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                 text=True, timeout=60).stdout
+        except subprocess.TimeoutExpired:
+            continue
+        mt = _TEMP.search(out)
+        if mt and int(mt.group(1)) != 0:
+            return _temp_cC_de(int(mt.group(1))) / 100.0
+        time.sleep(1)
+    return None
+
+
 def run_one(elf):
     """Devuelve los 18 words (strings hex) de 'results' tras correr el elf."""
     out = ""
@@ -109,7 +141,15 @@ def run_one_limpio(elf, get_pavg, reps=5, tol=0.02):
         mc = mcycle_de(words)
         ni = ninstr_de(words)
         ipc = ni / mc if mc else 1e9
-        pmed = get_pavg()
+        try:
+            pmed = get_pavg()
+        except TimeoutError:
+            # la fila de ESTA ventana no llego (subida perdida pese a los
+            # reintentos del ESP32, o flanco no visto): esperar mas no la trae.
+            # Se reintenta la MEDIDA completa (nueva ventana) en vez de abortar.
+            print(f"    corrida {i}/{reps}: ventana sin P_avg del ESP32; "
+                  f"REINTENTO la medida (nueva ventana)")
+            continue
         if ipc > IPC_MAX:
             print(f"    corrida {i}/{reps}: mcycle={mc:,}  IPC={ipc:.2f} CORRUPTA (wrap), descarto")
             continue
@@ -123,7 +163,8 @@ def run_one_limpio(elf, get_pavg, reps=5, tol=0.02):
             estable = True
             break
     if not validas:
-        raise RuntimeError(f"{elf}: ninguna corrida valida en {reps} (mcycle siempre corrupto/wrap)")
+        raise RuntimeError(f"{elf}: ninguna corrida valida en {reps} intentos "
+                           f"(mcycle corrupto/wrap o ESP32 sin publicar P_avg)")
     if not estable and len(validas) >= 2:
         print(f"    [AVISO] mcycle no se estabilizo ({len(validas)} corridas distintas): JTAG "
               f"ruidoso, uso la de menor mcycle. Reasenta el cable / baja adapter_khz / revisa el shunt.")

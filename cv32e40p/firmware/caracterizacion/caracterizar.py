@@ -57,8 +57,18 @@ def medir_uno(prog, elf, inbox):
     if prog == "idle":
         # idle (wfi) es robusto a la inflacion del JTAG (una ventana de idle
         # inflada sigue midiendo idle) y tiene IPC~0 por diseno -> 1 corrida.
-        words = jtag.run_one(elf)
-        P_med = inbox.get_pavg()
+        # Si la fila del ESP32 no llega (subida perdida), se reintenta la
+        # MEDIDA completa hasta 3 veces en vez de abortar la campana.
+        for intento in range(1, 4):
+            words = jtag.run_one(elf)
+            try:
+                P_med = inbox.get_pavg()
+                break
+            except TimeoutError:
+                if intento == 3:
+                    raise
+                print(f"    idle: ventana sin P_avg del ESP32; REINTENTO "
+                      f"({intento}/3)")
     else:
         words, P_med = jtag.run_one_limpio(elf, inbox.get_pavg)
     w = [modelo.to_int(x) for x in words]
@@ -128,7 +138,7 @@ def cmd_bucles(args):
                 extra = "(idle wfi)" if cat == "idle" else "(bucle dominado, hasta 5x limpia)"
                 print(f"==> {cat} rep {rep}/{args.repeats}  {extra}")
                 P_med, T, cont, tstr = medir_uno(cat, elf, inbox)
-                runs[cat].append({"P_med": P_med, "T": T, "cont": cont})
+                runs[cat].append({"P_med": P_med, "T": T, "cont": cont, "temp": tstr})
                 ts = time.strftime("%Y-%m-%d %H:%M:%S")
                 wr.writerow([ts, cat, rep, f"{P_med:.6f}", f"{T:.6f}", tstr]
                             + [cont[k] for k in modelo.COLS_CONTADORES])
@@ -140,6 +150,10 @@ def cmd_bucles(args):
                 time.sleep(3)
 
     P_idle = statistics.mean(r["P_med"] for r in runs["idle"])
+    # temperatura del die a la que se midio la linea base: la P_idle vale para esa
+    # condicion termica; se guarda para poder corregir la deriva por temperatura.
+    temps_idle = [float(r["temp"]) for r in runs["idle"] if r.get("temp")]
+    T_idle = statistics.mean(temps_idle) if temps_idle else None
     coefs = {}
     resumen = []
     for cat in COEF_CATS:
@@ -158,12 +172,31 @@ def cmd_bucles(args):
         resumen.append((cat, statistics.mean(deltas), statistics.mean(denoms),
                         coefs[cat], len(cat_coefs)))
 
+    # Fusion con el archivo previo: una corrida parcial (p.ej. solo ctrl) NO
+    # borra los coeficientes de las otras categorias. Es valido mezclar: cada
+    # coef es un delta interno a SU sesion (P_cat y P_idle de la misma sesion);
+    # P_idle/T_idle del archivo quedan los de HOY, que son los que la
+    # verificacion de hoy necesita como linea base.
+    if os.path.exists(coef_csv):
+        try:
+            _, prev = modelo.cargar_coeficientes(coef_csv)
+            faltan = {c: v for c, v in prev.items()
+                      if c in COEF_CATS and c not in coefs}
+            if faltan:
+                print(f"  (conservo del archivo previo: {', '.join(sorted(faltan))})")
+                coefs.update(faltan)
+        except Exception as e:
+            print(f"  [aviso] no pude leer coeficientes previos ({e}); "
+                  f"escribo solo lo medido")
+
     with open(coef_csv, "w", newline="") as f:
         w = csv.writer(f)
         w.writerow([f"# Bucles dominados (M1). Generado {time.strftime('%Y-%m-%d %H:%M:%S')}.",
                     "coef=(P_cat-P_idle)*T/n; div usa DIVCYC."])
         w.writerow(["parametro", "coef", "unidad"])
         w.writerow(["P_idle", f"{P_idle:.6f}", "W"])
+        if T_idle is not None:
+            w.writerow(["T_idle", f"{T_idle:.2f}", "C"])
         for cat in COEF_CATS:
             if cat in coefs:
                 unidad = "J/ciclo" if cat == "div" else "J/instr"
@@ -182,8 +215,9 @@ def cmd_bucles(args):
 DYN = ["alu", "mul", "mulh", "div", "mem", "ctrl", "float"]
 REGR = {"alu": "n_alu", "mul": "n_mul", "mulh": "n_mulh", "div": "c_div",
         "mem": "n_mem", "ctrl": "n_ctrl", "float": "n_float"}
-DEFAULT_PROGS = ["memcpy", "fsm", "crc", "matmul", "mulhash64", "dotprod", "gcd",
-                 "modpow", "trialdiv", "fpoly", "vecscale", "histogram", "sort"]
+DEFAULT_PROGS = ["memcpy", "fsm", "crc", "matmul", "mulhash64", "mulhscale",
+                 "dotprod", "gcd", "modpow", "trialdiv", "radix", "fpoly",
+                 "vecscale", "histogram", "sort"]
 
 
 def cargar_pidle(fuente):
@@ -201,13 +235,23 @@ def cargar_pidle(fuente):
     return P_idle
 
 
+def _temp_f(s):
+    """Temperatura del CSV/Sheet a float; tolera coma decimal (locale es-ES) y
+    vacio. None si no se puede parsear -> sin correccion para esa corrida."""
+    try:
+        return float(str(s).replace(",", ".")) if s not in (None, "") else None
+    except ValueError:
+        return None
+
+
 def leer_datos(datos_csv):
-    """Lee las corridas de datos.csv -> [(prog, P_med, T, cont)] (para --refit)."""
+    """Lee las corridas de datos.csv -> [(prog, P_med, T, cont, temp)] (--refit)."""
     rows = []
     with open(datos_csv) as f:
         for r in csv.DictReader(f):
             cont = {k: int(r[k]) for k in modelo.COLS_CONTADORES}
-            rows.append((r["programa"], float(r["P_med_W"]), cont["mcycle"] / F_CLK, cont))
+            rows.append((r["programa"], float(r["P_med_W"]), cont["mcycle"] / F_CLK,
+                         cont, r.get("temp_C", "")))
     return rows
 
 
@@ -255,7 +299,7 @@ def medir_regresion(progs, no_build, datos_csv):
             extra = "" if prog == "idle" else " (hasta 5x, me quedo con la limpia)"
             print(f"==> [{i}/{len(progs)}] {prog} por JTAG...{extra}")
             P_med, T, cont, tstr = medir_uno(prog, elfs[prog], inbox)
-            rows.append((prog, P_med, T, cont))
+            rows.append((prog, P_med, T, cont, tstr))
             ts = time.strftime("%Y-%m-%d %H:%M:%S")
             wr.writerow([ts, prog, f"{P_med:.6f}", f"{T:.6f}", tstr]
                         + [cont[k] for k in modelo.COLS_CONTADORES])
@@ -294,9 +338,12 @@ def cmd_regresion(args):
         if not idle_rows:
             sys.exit("--pidle medir pero no hay corrida 'idle' (mide sin --refit, o usa --pidle bucles)")
         P_idle = idle_rows[-1][1]
+        T_idle = _temp_f(idle_rows[-1][4]) if len(idle_rows[-1]) > 4 else None
         fuente = f"idle medido en sesion ({P_idle:.4f} W)"
     else:
         P_idle = cargar_pidle(args.pidle)
+        # si viene de bucles, hereda su T_idle; si es un numero suelto, no hay
+        T_idle = modelo.ultimo_T_idle if args.pidle == "bucles" else None
         fuente = args.pidle
 
     if len(cal_rows) < len(DYN) + 1:
@@ -312,6 +359,8 @@ def cmd_regresion(args):
                      f" R2(vs0)={info['r2']:.4f}, RMSE={info['rmse']*1e3:.2f} mW, cond={info['cond']:.1f}"])
         wc.writerow(["parametro", "coef", "unidad"])
         wc.writerow(["P_idle", f"{info['P_idle']:.6f}", "W"])
+        if T_idle is not None:
+            wc.writerow(["T_idle", f"{T_idle:.2f}", "C"])
         for c in DYN:
             unidad = "J/ciclo" if c == "div" else "J/instr"
             wc.writerow([c, f"{coefs[c]:.6e}", unidad])
@@ -323,7 +372,8 @@ def cmd_regresion(args):
         flag = "  <-- NEGATIVO (soporte debil / anti-correlacion)" if coefs[c] < 0 else ""
         print(f"  {c:6s} {coefs[c]:+.6e} {unidad}{flag}")
     print("\nresiduos por corrida (medido - ajustado):")
-    for (prog, P_med, _, _), pa in zip(cal_rows, info["pred_abs"]):
+    for r, pa in zip(cal_rows, info["pred_abs"]):
+        prog, P_med = r[0], r[1]
         print(f"  {prog:14s} med={P_med:7.4f}  fit={pa:7.4f}  resid={(P_med-pa)*1e3:+7.2f} mW")
     print(f"\nGuardado: {coef_csv}")
 

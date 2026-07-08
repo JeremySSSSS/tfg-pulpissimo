@@ -31,6 +31,7 @@ import sheet   # noqa: E402
 FUENTES = os.path.join(HERE, "regresion", "fuentes")
 ELF = os.path.join(HERE, "regresion", "elf", "idle_sweep.elf")
 CSV = os.path.join(HERE, "pidle_temp.csv")
+FIT_CSV = os.path.join(HERE, "pidle_fit.csv")
 RISCV = os.environ.get("RISCV", "/home/jjsotoch/pulp/toolchain/v1.0.16-pulp-riscv-gcc-ubuntu-18")
 CC = f"{RISCV}/bin/riscv32-unknown-elf-gcc"
 
@@ -65,9 +66,20 @@ def fit(csvpath):
     if len(T) < 3:
         print("pocos puntos para ajustar (>=3)")
         return
-    spread = T.max() - T.min()
     A = np.vstack([np.ones_like(T), T]).T
     (a, b), *_ = np.linalg.lstsq(A, P, rcond=None)
+    # descarta transitorios (p.ej. la 1ra ventana sin asentar, que queda muy por
+    # debajo de la recta): puntos con residuo > 3 sigma. Un solo outlier arruina
+    # la pendiente y el R2.
+    resid = P - (a + b * T)
+    keep = np.abs(resid) <= 3 * resid.std()
+    n_drop = int((~keep).sum())
+    if n_drop and keep.sum() >= 3:
+        T, P = T[keep], P[keep]
+        A = np.vstack([np.ones_like(T), T]).T
+        (a, b), *_ = np.linalg.lstsq(A, P, rcond=None)
+        print(f"  (descarte {n_drop} punto(s) fuera de 3 sigma: transitorios)")
+    spread = T.max() - T.min()
     pred = a + b * T
     ss_tot = ((P - P.mean()) ** 2).sum()
     r2 = 1 - ((P - pred) ** 2).sum() / ss_tot if ss_tot > 0 else float("nan")
@@ -77,7 +89,20 @@ def fit(csvpath):
     print(f"  P_idle    : {P.min():.4f} .. {P.max():.4f} W   ({(P.max()-P.min())*1e3:.1f} mW)")
     print(f"  pendiente : {b*1e3:.2f} mW/C   R2={r2:.4f}")
     if spread < 3:
-        print("  [AVISO] barrido < 3 C: arranca con la placa MAS fria para un ajuste util.")
+        print("  [AVISO] barrido < 3 C: forza mas rango (ventilador / aire tibio SOLO al FPGA).")
+
+    # guarda la pendiente para la correccion por temperatura de verificar.py:
+    # P_idle(T) = P_idle_ref + b*(T - T_ref). Solo 'b' es transferible entre
+    # sesiones; el anclaje (P_idle_ref, T_ref) lo pone cada caracterizacion.
+    with open(FIT_CSV, "w", newline="") as fd:
+        w = csv.writer(fd)
+        w.writerow([f"# Ajuste P_idle(T)=a+b*T del barrido {time.strftime('%Y-%m-%d %H:%M')}."
+                    f" spread={spread:.1f}C, R2={r2:.4f}, n={len(T)}."])
+        w.writerow(["parametro", "valor", "unidad"])
+        w.writerow(["a", f"{a:.6f}", "W"])
+        w.writerow(["b_W_per_C", f"{b:.8e}", "W/C"])
+        w.writerow(["r2", f"{r2:.4f}", ""])
+    print(f"  pendiente guardada en {os.path.basename(FIT_CSV)} (la usa verificar.py)")
 
 
 def main():
@@ -102,15 +127,28 @@ def main():
     with open(CSV, "w", newline="") as fd:
         wr = csv.writer(fd)
         wr.writerow(["hora", "temp_C", "P_idle_W"])
-        for i in range(1, args.n + 1):
-            jtag.run_one(ELF)
-            tC = jtag.ultima_temp_cC
-            fila, seen = esperar_inbox(seen)
-            P = float(str(fila["p_avg"]).replace(",", "."))
-            t = f"{tC/100:.2f}" if tC is not None else ""
-            wr.writerow([time.strftime("%H:%M:%S"), t, f"{P:.6f}"])
-            fd.flush()
-            print(f"  [{i:2d}/{args.n}]  T = {t} C   P_idle = {P:.4f} W")
+        try:
+            i = 1
+            while i <= args.n:
+                try:
+                    jtag.run_one(ELF)
+                    tC = jtag.ultima_temp_cC
+                    fila, seen = esperar_inbox(seen)
+                except TimeoutError:
+                    # fila perdida (hipo de WiFi/Sheet): REINTENTA la medida en
+                    # vez de abortar el barrido (con 60 medidas algun hipo cae).
+                    print(f"  [{i:2d}/{args.n}]  ventana sin P_avg del ESP32; reintento la medida")
+                    seen = sheet.n_filas("inbox")
+                    continue
+                P = float(str(fila["p_avg"]).replace(",", "."))
+                t = f"{tC/100:.2f}" if tC is not None else ""
+                wr.writerow([time.strftime("%H:%M:%S"), t, f"{P:.6f}"])
+                fd.flush()
+                print(f"  [{i:2d}/{args.n}]  T = {t} C   P_idle = {P:.4f} W")
+                i += 1
+        except KeyboardInterrupt:
+            # corte manual (p.ej. ya hay rango de sobra): ajusta con lo colectado
+            print(f"\n[corte manual tras {i-1} medidas] ajusto con lo recolectado.")
     fit(CSV)
 
 

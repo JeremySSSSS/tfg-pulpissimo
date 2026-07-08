@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import csv
+import os
 
 F_CLK = 10e6
 MASK32 = 0xFFFFFFFF
@@ -20,8 +21,17 @@ def val(w, lo):
     return w[lo] + (w[lo + 1] << 32)
 
 
+# temperatura del die (C) a la que se midio P_idle en el ultimo coeficientes.csv
+# leido; None si el archivo no la trae. Registra la condicion termica de la base.
+ultimo_T_idle = None
+
+
 def cargar_coeficientes(path):
-    """Lee un coeficientes.csv (formato comun) -> (P_idle, {cat: coef})."""
+    """Lee un coeficientes.csv (formato comun) -> (P_idle, {cat: coef}).
+    La temperatura de la linea base (fila 'T_idle', si existe) queda en el global
+    modelo.ultimo_T_idle y NO se mete en coef."""
+    global ultimo_T_idle
+    ultimo_T_idle = None
     P_idle = None
     coef = {}
     with open(path) as f:
@@ -34,9 +44,32 @@ def cargar_coeficientes(path):
             c = float(row[1])
             if name == "P_idle":
                 P_idle = c
+            elif name == "T_idle":
+                ultimo_T_idle = c
             else:
                 coef[name] = c
     return P_idle, coef
+
+
+def cargar_pendiente_termica(path):
+    """Pendiente b [W/C] del ajuste P_idle(T) del barrido termico
+    (pidle_fit.csv, fila 'b_W_per_C'). None si no hay barrido."""
+    if not os.path.exists(path):
+        return None
+    with open(path) as f:
+        for row in csv.reader(f):
+            if row and row[0].strip() == "b_W_per_C":
+                return float(row[1])
+    return None
+
+
+def correccion_termica(temp, T_idle, b):
+    """Termino de fuga por temperatura de la linea base: b*(T - T_idle) [W].
+    P_idle(T) = P_idle_ref + correccion_termica(T, T_ref, b). Devuelve 0 si
+    falta algun dato (sin barrido o sin lectura de temperatura)."""
+    if b is None or T_idle is None or temp is None:
+        return 0.0
+    return b * (temp - T_idle)
 
 
 def potencia_dinamica(w, coef):
