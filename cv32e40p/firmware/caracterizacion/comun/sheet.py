@@ -73,7 +73,7 @@ class Inbox:
         self.hoja = hoja
         self.seen = n_filas(hoja)
 
-    def get_pavg(self, timeout=180):
+    def get_pavg(self, timeout=30):
         t0 = time.time()
         while time.time() - t0 < timeout:
             filas = leer(self.hoja)

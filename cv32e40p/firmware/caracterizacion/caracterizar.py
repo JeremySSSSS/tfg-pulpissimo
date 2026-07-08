@@ -70,7 +70,7 @@ def medir_uno(prog, elf, inbox):
                 print(f"    idle: ventana sin P_avg del ESP32; REINTENTO "
                       f"({intento}/3)")
     else:
-        words, P_med = jtag.run_one_limpio(elf, inbox.get_pavg)
+        words, P_med = jtag.run_medido(elf, inbox.get_pavg)
     w = [modelo.to_int(x) for x in words]
     cont = modelo.contadores(w)
     T = cont["mcycle"] / F_CLK
@@ -135,7 +135,7 @@ def cmd_bucles(args):
         for cat in cats:
             elf = find_elf(cat, DIR_BUCLES)
             for rep in range(1, args.repeats + 1):
-                extra = "(idle wfi)" if cat == "idle" else "(bucle dominado, hasta 5x limpia)"
+                extra = "(idle wfi)" if cat == "idle" else "(bucle dominado)"
                 print(f"==> {cat} rep {rep}/{args.repeats}  {extra}")
                 P_med, T, cont, tstr = medir_uno(cat, elf, inbox)
                 runs[cat].append({"P_med": P_med, "T": T, "cont": cont, "temp": tstr})
@@ -296,7 +296,7 @@ def medir_regresion(progs, no_build, datos_csv):
         if new:
             wr.writerow(header)
         for i, prog in enumerate(progs, 1):
-            extra = "" if prog == "idle" else " (hasta 5x, me quedo con la limpia)"
+            extra = "" if prog == "idle" else ""
             print(f"==> [{i}/{len(progs)}] {prog} por JTAG...{extra}")
             P_med, T, cont, tstr = medir_uno(prog, elfs[prog], inbox)
             rows.append((prog, P_med, T, cont, tstr))

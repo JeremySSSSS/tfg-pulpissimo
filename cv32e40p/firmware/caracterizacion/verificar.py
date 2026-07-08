@@ -133,8 +133,8 @@ def main():
     errs = []
     for prog in args.programas:
         elf = find_elf(prog)
-        print(f"==> corriendo {prog} por JTAG (hasta 5x, me quedo con la limpia)...")
-        words, pbar = jtag.run_one_limpio(elf, inbox.get_pavg)
+        print(f"==> corriendo {prog} por JTAG...")
+        words, pbar = jtag.run_medido(elf, inbox.get_pavg)
         w = [modelo.to_int(x) for x in words]
         T = ((w[17] - w[16]) & modelo.MASK32) / modelo.F_CLK
         P_din = modelo.potencia_dinamica(w, coef)   # el modelo (dinamica)

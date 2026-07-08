@@ -45,7 +45,7 @@ def build_idle_corto():
         cwd=FUENTES, check=True)
 
 
-def esperar_inbox(seen, timeout=120):
+def esperar_inbox(seen, timeout=45):
     t0 = time.time()
     while time.time() - t0 < timeout:
         filas = sheet.leer("inbox")

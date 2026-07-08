@@ -119,24 +119,17 @@ def run_one(elf):
 IPC_MAX = 1.02     # IPC fisico maximo (single-issue); > esto = mcycle corrupto (wrap)
 
 
-def run_one_limpio(elf, get_pavg, reps=5, tol=0.02):
-    """Corre `elf` hasta `reps` veces y devuelve (words, P_med) de la corrida LIMPIA.
-    Motivo: el FT232H inestable haltea el core durante `continue`; como
-    dcsr.stopcount=0, mcycle SIGUE contando durante el halt Y la ventana GPIO del
-    ESP queda abierta -> mcycle y P_med salen inflados/diluidos de forma NO
-    determinista (mismo programa -> mcycle varia hasta 74x). A veces mcycle se lee
-    CORRUPTO-chico (wrap > 2^32) dando IPC>1 imposible.
+def run_medido(elf, get_pavg, reintentos=3):
+    """Corre `elf` UNA vez y devuelve (words, P_med) de esa ventana.
 
-    Seleccion robusta SIN suponer un IPC esperado (sirve para alu de alto IPC,
-    para div/idle de IPC bajo POR DISENO, etc.): la ejecucion es DETERMINISTA, asi
-    que la corrida limpia es la de MENOR mcycle VALIDO (un halt solo SUMA ciclos
-    parados). Valido = IPC<=1.02 (descarta wraps). `get_pavg()` espera y devuelve
-    el P_med del ESP de la corrida recien hecha (misma ventana fisica que mcycle).
-    Early-stop cuando dos corridas validas COINCIDEN en mcycle (valor reproducible
-    = sin halt). Avisa solo si nunca se estabiliza (JTAG ruidoso de verdad)."""
-    validas = []       # (mcycle, words, pmed)
-    estable = False
-    for i in range(1, reps + 1):
+    Antes esto corria 'hasta 5x y se quedaba con la limpia' porque el FT232H
+    inestable inflaba mcycle de forma no determinista. Con el banco actual la
+    ejecucion es reproducible (mcycle identico entre corridas y entre dias en
+    ~140 corridas auditadas), asi que la doble corrida de confirmacion sobra.
+    Guardas que quedan, gratis: se reintenta la medida completa si mcycle sale
+    CORRUPTO (wrap -> IPC > 1.02) o si la fila del ESP32 no llega en el
+    timeout corto de get_pavg (subida perdida)."""
+    for intento in range(1, reintentos + 1):
         words = run_one(elf)
         mc = mcycle_de(words)
         ni = ninstr_de(words)
@@ -144,28 +137,14 @@ def run_one_limpio(elf, get_pavg, reps=5, tol=0.02):
         try:
             pmed = get_pavg()
         except TimeoutError:
-            # la fila de ESTA ventana no llego (subida perdida pese a los
-            # reintentos del ESP32, o flanco no visto): esperar mas no la trae.
-            # Se reintenta la MEDIDA completa (nueva ventana) en vez de abortar.
-            print(f"    corrida {i}/{reps}: ventana sin P_avg del ESP32; "
-                  f"REINTENTO la medida (nueva ventana)")
+            print(f"    intento {intento}/{reintentos}: ventana sin P_avg del "
+                  f"ESP32; REINTENTO la medida (nueva ventana)")
             continue
         if ipc > IPC_MAX:
-            print(f"    corrida {i}/{reps}: mcycle={mc:,}  IPC={ipc:.2f} CORRUPTA (wrap), descarto")
+            print(f"    intento {intento}/{reintentos}: mcycle={mc:,} "
+                  f"IPC={ipc:.2f} CORRUPTO (wrap); reintento")
             continue
-        validas.append((mc, words, pmed))
-        validas.sort(key=lambda r: r[0])
-        mejor = validas[0][0]
-        marca = "  <- mas limpia (min)" if mc == mejor else f"  (inflada {mc/mejor:.1f}x)"
-        print(f"    corrida {i}/{reps}: mcycle={mc:,}  IPC={ipc:.3f}  T={mc/1e7:.1f}s  P={pmed:.4f}W{marca}")
-        # reproducible: las dos menores coinciden -> determinista -> limpia
-        if len(validas) >= 2 and abs(validas[0][0] - validas[1][0]) <= tol * validas[0][0]:
-            estable = True
-            break
-    if not validas:
-        raise RuntimeError(f"{elf}: ninguna corrida valida en {reps} intentos "
-                           f"(mcycle corrupto/wrap o ESP32 sin publicar P_avg)")
-    if not estable and len(validas) >= 2:
-        print(f"    [AVISO] mcycle no se estabilizo ({len(validas)} corridas distintas): JTAG "
-              f"ruidoso, uso la de menor mcycle. Reasenta el cable / baja adapter_khz / revisa el shunt.")
-    return validas[0][1], validas[0][2]
+        print(f"    mcycle={mc:,}  IPC={ipc:.3f}  T={mc/1e7:.1f}s  P={pmed:.4f}W")
+        return words, pmed
+    raise RuntimeError(f"{elf}: sin medida valida en {reintentos} intentos "
+                       f"(mcycle corrupto o ESP32 sin publicar P_avg)")
