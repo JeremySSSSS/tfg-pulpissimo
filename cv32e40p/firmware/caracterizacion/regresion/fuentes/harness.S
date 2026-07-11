@@ -17,6 +17,9 @@ _start:
 
     gpio_init
     csrci 0x320, 1            /* habilita mcycle */
+#ifdef CHUNKS
+    enable_timer_wakeup       /* wfi con despertar por timer (modo duty) */
+#endif
 
     /* Habilita FP por si el kernel usa float (inofensivo si no). */
     li t0, 0x6000
@@ -33,7 +36,26 @@ _start:
     la   t1, mcyc_ini
     sw   t0, 0(t1)
 
+#ifdef CHUNKS
+    /* Modo DUTY (barrido de intensidad estilo EfiMon): el kernel corre en
+     * CHUNKS tandas con SLEEP_TICKS de wfi entre ellas. Misma composicion de
+     * instrucciones (el kernel se compila con REPS/CHUNKS y se llama CHUNKS
+     * veces), intensidad efectiva menor. El contador de tandas vive en
+     * MEMORIA: los kernels pueden pisar cualquier registro. */
+    li   t0, CHUNKS
+    la   t1, chunk_cnt
+    sw   t0, 0(t1)
+chunk_loop:
+    call run_workload
+    wfi_idle SLEEP_TICKS
+    la   t1, chunk_cnt
+    lw   t0, 0(t1)
+    addi t0, t0, -1
+    sw   t0, 0(t1)
+    bnez t0, chunk_loop
+#else
     call run_workload        /* el programa real (puede pisar cualquier s-reg) */
+#endif
 
     csrr s2, mcycle          /* mcycle_fin: leido DESPUES del call, sin call despues -> seguro */
     gpio_low
@@ -61,4 +83,7 @@ results:
     .space 72
 .align 4
 mcyc_ini:
+    .space 4
+.align 4
+chunk_cnt:
     .space 4

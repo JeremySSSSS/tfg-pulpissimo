@@ -255,6 +255,36 @@ def leer_datos(datos_csv):
     return rows
 
 
+def ajustar_efimon(cal_rows, idle_rows):
+    """Ajuste al estilo EfiMon: NNLS CON INTERCEPTO sobre la potencia TOTAL.
+    Requiere el barrido de intensidad (variantes _d60/_d30: misma composicion,
+    distinta utilizacion), que decorrelaciona el modo comun de las categorias
+    por diseno experimental. Las filas de idle (tasas 0) anclan el intercepto,
+    que hace el papel de P_static (ec. 5 de EfiMon)."""
+    from scipy.optimize import nnls
+    rows = cal_rows + idle_rows
+    R = np.array([[r[3][REGR[c]] / r[2] if r[2] > 0 else 0.0 for c in DYN]
+                  for r in rows])
+    y = np.array([r[1] for r in rows])
+    X = np.hstack([np.ones((len(y), 1)), R])
+    sd = X.std(0); sd[0] = 1.0; sd[sd == 0] = 1.0
+    e, _ = nnls(X / sd, y)
+    e = e / sd
+    P_static = e[0]
+    coefs = dict(zip(DYN, e[1:]))
+    pred = X @ e
+    resid = y - pred
+    ss_res = float(resid @ resid)
+    delta = y - P_static
+    ss_tot = float(delta @ delta)
+    info = {"P_idle": P_static,
+            "r2": 1 - ss_res / ss_tot if ss_tot > 0 else float("nan"),
+            "rmse": (ss_res / len(y)) ** 0.5,
+            "cond": float(np.linalg.cond(X / sd)),
+            "pred_abs": pred[:len(cal_rows)]}
+    return coefs, info
+
+
 def ajustar_diferencial(rows, P_idle):
     """Regresion DIFERENCIAL no negativa (inspirada en EfiMon): separa la
     intensidad de la composicion. delta = alfa*r_total + sum extra_k * r_k,
@@ -362,6 +392,8 @@ def cmd_regresion(args):
             sys.exit(f"hacen falta >= {len(DYN)+1} programas mixtos (M > 7 incognitas); "
                      f"diste {len(progs)}")
         # con --pidle medir, idle.elf va PRIMERO en la misma sesion (mismo piso)
+        if args.modelo == "efimon":
+            progs = [v for q in progs for v in (q, q + "_d60", q + "_d30")]
         run_list = (["idle"] + progs) if args.pidle == "medir" else progs
         rows = medir_regresion(run_list, args.no_build, datos_csv)
 
@@ -383,7 +415,14 @@ def cmd_regresion(args):
     if len(cal_rows) < len(DYN) + 1:
         sys.exit(f"solo {len(cal_rows)} programas de calibracion; hacen falta >= {len(DYN)+1}")
 
-    if args.modelo == "diferencial":
+    if args.modelo == "efimon":
+        if not idle_rows:
+            sys.exit("--modelo efimon necesita la corrida de idle en sesion (--pidle medir)")
+        coefs, info = ajustar_efimon(cal_rows, idle_rows)
+        print(f"  modelo efimon: P_static (intercepto) = {info['P_idle']:.4f} W "
+              f"(idle medido: {P_idle:.4f} W)")
+        P_idle = info["P_idle"]
+    elif args.modelo == "diferencial":
         coefs, info = ajustar_diferencial(cal_rows, P_idle)
         print(f"  modelo diferencial: alfa (costo base/instr) = {info['alfa']*1e9:.3f} nJ")
     else:
@@ -435,9 +474,11 @@ def main():
     ar = sub.add_parser("regresion", aliases=["2"], help="M2: regresion sobre programas mixtos")
     ar.add_argument("programas", nargs="*", default=DEFAULT_PROGS,
                     help="conjunto de calibracion; si se omite usa el por defecto")
-    ar.add_argument("--modelo", default="clasico", choices=["clasico", "diferencial"],
+    ar.add_argument("--modelo", default="clasico", choices=["clasico", "diferencial", "efimon"],
                     help="ajuste: 'clasico' (tasas por categoria, lstsq) o "
-                         "'diferencial' (alfa*r_total + sobrecostos, NNLS, estilo EfiMon)")
+                         "'diferencial' (alfa*r_total + sobrecostos, NNLS) o "
+                         "'efimon' (NNLS con intercepto + barrido de intensidad "
+                         "_d60/_d30; corre 3 variantes por programa)")
     ar.add_argument("--pidle", default="medir",
                     help="P_idle FIJO: 'medir' (corre idle.elf en ESTA sesion, default), "
                          "'bucles' (de su coeficientes.csv) o un numero en W")

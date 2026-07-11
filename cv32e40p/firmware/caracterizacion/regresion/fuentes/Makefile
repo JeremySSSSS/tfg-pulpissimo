@@ -26,7 +26,9 @@ FLAGS  := -nostdlib -nostartfiles -static -Os -g -mabi=ilp32 \
 KFLAGS := $(FLAGS) -fno-builtin -fno-tree-loop-distribute-patterns
 
 .PHONY: all clean
-all: $(ELFS) $(OUT)/idle.elf
+include duty_variants.mk
+
+all: $(ELFS) $(DUTY_ELFS) $(OUT)/idle.elf
 
 # idle de referencia (wfi, piso pasivo) ~30 s -> da P_idle medido en sesion.
 # .S auto-contenido (su propio _start), no usa harness.S.
