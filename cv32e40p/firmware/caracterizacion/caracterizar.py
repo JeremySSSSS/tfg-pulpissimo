@@ -74,6 +74,13 @@ def medir_uno(prog, elf, inbox):
     w = [modelo.to_int(x) for x in words]
     cont = modelo.contadores(w)
     T = cont["mcycle"] / F_CLK
+    # Variantes de ciclo de trabajo: mcycle se CONGELA durante el wfi, asi que
+    # mcycle/F_CLK es solo el tiempo ACTIVO. La ventana real (la que promedia el
+    # ESP32) es activo/duty, exacto por construccion (suenos proporcionales).
+    if prog.endswith("_d60"):
+        T /= 0.60
+    elif prog.endswith("_d30"):
+        T /= 0.30
     tC = jtag.ultima_temp_cC                 # temperatura del die (XADC), centi-C
     tstr = f"{tC/100:.2f}" if tC is not None else ""
     return P_med, T, cont, tstr
