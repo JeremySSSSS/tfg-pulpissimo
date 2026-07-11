@@ -1,7 +1,12 @@
-// M1 - bucle dominado MEM.  ~20 s a 10 MHz (5.75M iter x 256 instr/iter).
-// 128 sw + 128 lw sobre un buffer en L2 (32 rept x 8) por iteracion + addi/bnez.
-// Desenrollado x4 (vs 64) para que el overhead addi/bnez pese 1-en-256 (0.4%).
-// Ventana de medicion = flanco de GPIO8 (-> ESP32). Vuelca 16 CSR + mcycle a 'results'.
+// M1 - bucle dominado MEM.  ~20 s a 10 MHz.
+// REDISENADO con operandos VARIADOS (misma leccion que ctrl): la version
+// anterior repetia los mismos operandos por siempre y media la cota INFERIOR
+// del costo (sin conmutacion de datos; el dato escrito era SIEMPRE 0xABCD1234). Diseno "pool de pares": 10
+// registros con valores variados -> 45 pares DISTINTOS de operandos por
+// bloque (conmutacion real entre operaciones consecutivas), resultados a un
+// registro sumidero (sin realimentacion -> los valores no colapsan), y 2
+// updates por iteracion que evolucionan el pool. Dominancia ~98%.
+// Operandos inicializados DESPUES de gpio_high (el macro pisa t0/t1).
 #include "platform.inc"
 
 .section .text.start
@@ -19,25 +24,68 @@ _start:
     csrci 0x320, 1                  // habilita mcycle
 
     reset_category_counters
-    li s0, 383000                  // LOOP_COUNT
+    la s2, data_words
+    li s0, 616000                 // LOOP_COUNT
 
     gpio_high
 
-    la s2, data_words              // buffer
-    li a2, 0xABCD1234              // dato a escribir
+    li t0, 0x7A3F158B
+    li t1, 0xC49E2D87
+    li t2, 0x5D18B3E9
+    li t3, 0xA7C46F21
+    li t4, 0x39F7D5A3
+    li t5, 0xE8B1C4D5
+    li t6, 0x6C2E9F47
+    li a0, 0x91D5B7E3
+    li a1, 0x4BF8A6D1
+    li a2, 0xD73C58A9
 
     csrr s1, mcycle
 measurement_loop:
-    .rept 32
-    sw a2, 0(s2)
-    sw a2, 4(s2)
-    sw a2, 8(s2)
-    sw a2, 12(s2)
-    lw t0, 0(s2)
-    lw t1, 4(s2)
-    lw t2, 8(s2)
-    lw t3, 12(s2)
+    .rept 4
+    sw t0, 0(s2)
+    lw a4, 12(s2)
+    sw t1, 32(s2)
+    lw a4, 44(s2)
+    sw t2, 0(s2)
+    lw a4, 12(s2)
+    sw t3, 32(s2)
+    lw a4, 44(s2)
+    sw t4, 0(s2)
+    lw a4, 12(s2)
+    sw t5, 32(s2)
+    lw a4, 44(s2)
+    sw t6, 0(s2)
+    lw a4, 12(s2)
+    sw a0, 32(s2)
+    lw a4, 44(s2)
+    sw a1, 0(s2)
+    lw a4, 12(s2)
+    sw a2, 32(s2)
+    lw a4, 44(s2)
+    sw t0, 0(s2)
+    lw a4, 12(s2)
+    sw t1, 32(s2)
+    lw a4, 44(s2)
+    sw t2, 0(s2)
+    lw a4, 12(s2)
+    sw t3, 32(s2)
+    lw a4, 44(s2)
+    sw t4, 0(s2)
+    lw a4, 12(s2)
+    sw t5, 32(s2)
+    lw a4, 44(s2)
+    sw t6, 0(s2)
+    lw a4, 12(s2)
+    sw a0, 32(s2)
+    lw a4, 44(s2)
+    sw a1, 0(s2)
+    lw a4, 12(s2)
+    sw a2, 32(s2)
+    lw a4, 44(s2)
     .endr
+    addi t0, t0, 0x2F1
+    addi a1, a1, 0x1B3
     addi s0, s0, -1
     bnez s0, measurement_loop
     csrr s2, mcycle
@@ -57,13 +105,11 @@ trap_handler:
     .option pop
 .size _start, .-_start
 
-.section .data
-.align 4
-data_words:
-    .word 0x11111111, 0x22222222, 0, 0, 0, 0
-
 .section .bss
 .align 4
 .globl results
 results:
     .space 72
+.align 4
+data_words:
+    .space 64
