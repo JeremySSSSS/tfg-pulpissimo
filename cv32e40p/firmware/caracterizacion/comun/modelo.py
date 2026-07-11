@@ -78,6 +78,7 @@ def potencia_dinamica(w, coef):
     T_cyc = (w[17] - w[16]) & MASK32
     E = sum(coef.get(c, 0.0) * val(w, WLO[c]) for c in INSTR)   # por instruccion
     E += coef.get("div", 0.0) * val(w, WLO["divcyc"])           # div por ciclo
+    E += coef.get("div_n", 0.0) * val(w, WLO["div_n"])          # div: costo base por instr (modelo diferencial)
     return E / (T_cyc / F_CLK)
 
 

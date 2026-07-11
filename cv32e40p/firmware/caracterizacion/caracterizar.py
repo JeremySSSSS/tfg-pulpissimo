@@ -255,6 +255,40 @@ def leer_datos(datos_csv):
     return rows
 
 
+def ajustar_diferencial(rows, P_idle):
+    """Regresion DIFERENCIAL no negativa (inspirada en EfiMon): separa la
+    intensidad de la composicion. delta = alfa*r_total + sum extra_k * r_k,
+    con NNLS (coeficientes >= 0). alfa = costo base por instruccion retirada
+    (modo comun: fetch/pipeline); extra_k = sobrecosto de la categoria sobre
+    ese base. Evita que el modo comun se vuelque en la columna de alu (la mas
+    correlacionada con la tasa total). Coeficientes absolutos guardados:
+    cat = alfa + extra; div por ciclo = extra_div; div_n = alfa (por instr)."""
+    from scipy.optimize import nnls
+    INSTR_CATS = ["alu", "mul", "mulh", "mem", "ctrl", "float"]
+    rtot = np.array([sum(r[3][REGR[c]] for c in INSTR_CATS) + r[3]["n_div"]
+                     for r in rows]) / np.array([r[2] for r in rows])
+    Rx = np.array([[r[3][REGR[c]] / r[2] for c in DYN if c != "alu"] for r in rows])
+    X = np.hstack([rtot[:, None], Rx])
+    delta = np.array([r[1] for r in rows]) - P_idle
+    sd = X.std(0); sd[sd == 0] = 1.0
+    e, _ = nnls(X / sd, delta)
+    e = e / sd
+    alfa = e[0]
+    extras = dict(zip([c for c in DYN if c != "alu"], e[1:]))
+    coefs = {"alu": alfa, "div": extras["div"], "div_n": alfa}
+    for c in INSTR_CATS[1:]:
+        coefs[c] = alfa + extras[c]
+    pred = X @ e
+    resid = delta - pred
+    ss_res = float(resid @ resid); ss_tot = float(delta @ delta)
+    info = {"P_idle": P_idle, "alfa": alfa,
+            "r2": 1 - ss_res / ss_tot if ss_tot > 0 else float("nan"),
+            "rmse": (ss_res / len(delta)) ** 0.5,
+            "cond": float(np.linalg.cond(X / sd)),
+            "pred_abs": pred + P_idle}
+    return coefs, info
+
+
 def ajustar(rows, P_idle):
     """Regresion SIN intercepto con P_idle FIJO: delta = P_med - P_idle = R @ e.
     R[k,c] = contador_c / T (tasa). Se escalan las columnas (solo dividir por sd,
@@ -349,7 +383,11 @@ def cmd_regresion(args):
     if len(cal_rows) < len(DYN) + 1:
         sys.exit(f"solo {len(cal_rows)} programas de calibracion; hacen falta >= {len(DYN)+1}")
 
-    coefs, info = ajustar(cal_rows, P_idle)
+    if args.modelo == "diferencial":
+        coefs, info = ajustar_diferencial(cal_rows, P_idle)
+        print(f"  modelo diferencial: alfa (costo base/instr) = {info['alfa']*1e9:.3f} nJ")
+    else:
+        coefs, info = ajustar(cal_rows, P_idle)
 
     with open(coef_csv, "w", newline="") as f:
         wc = csv.writer(f)
@@ -364,6 +402,8 @@ def cmd_regresion(args):
         for c in DYN:
             unidad = "J/ciclo" if c == "div" else "J/instr"
             wc.writerow([c, f"{coefs[c]:.6e}", unidad])
+        if "div_n" in coefs:
+            wc.writerow(["div_n", f"{coefs['div_n']:.6e}", "J/instr"])
 
     print(f"  {len(cal_rows)} programas de calibracion:  R2(vs0)={info['r2']:.4f}  "
           f"RMSE={info['rmse']*1e3:.2f} mW  cond={info['cond']:.1f}")
@@ -395,6 +435,9 @@ def main():
     ar = sub.add_parser("regresion", aliases=["2"], help="M2: regresion sobre programas mixtos")
     ar.add_argument("programas", nargs="*", default=DEFAULT_PROGS,
                     help="conjunto de calibracion; si se omite usa el por defecto")
+    ar.add_argument("--modelo", default="clasico", choices=["clasico", "diferencial"],
+                    help="ajuste: 'clasico' (tasas por categoria, lstsq) o "
+                         "'diferencial' (alfa*r_total + sobrecostos, NNLS, estilo EfiMon)")
     ar.add_argument("--pidle", default="medir",
                     help="P_idle FIJO: 'medir' (corre idle.elf en ESTA sesion, default), "
                          "'bucles' (de su coeficientes.csv) o un numero en W")
