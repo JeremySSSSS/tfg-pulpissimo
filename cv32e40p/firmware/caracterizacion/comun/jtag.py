@@ -144,7 +144,7 @@ def run_medido(elf, get_pavg, reintentos=3):
             print(f"    intento {intento}/{reintentos}: mcycle={mc:,} "
                   f"IPC={ipc:.2f} CORRUPTO (wrap); reintento")
             continue
-        print(f"    mcycle={mc:,}  IPC={ipc:.3f}  T={mc/1e7:.1f}s  P={pmed:.4f}W")
+        print(f"    ok: {mc/1e7:5.1f} s activos ({mc:,} ciclos)  IPC={ipc:.3f}")
         return words, pmed
     raise RuntimeError(f"{elf}: sin medida valida en {reintentos} intentos "
                        f"(mcycle corrupto o ESP32 sin publicar P_avg)")

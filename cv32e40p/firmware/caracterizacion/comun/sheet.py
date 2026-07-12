@@ -75,11 +75,14 @@ class Inbox:
 
     def get_pavg(self, timeout=30):
         t0 = time.time()
+        avisado = False
         while time.time() - t0 < timeout:
             filas = leer(self.hoja)
             if len(filas) > self.seen:
                 self.seen = len(filas)
                 return fnum(filas[-1]["p_avg"])
-            print(f"    esperando P_avg del ESP32... ({time.time()-t0:4.0f}s/{timeout}s)")
+            if not avisado:   # un solo aviso, no uno cada 3 s
+                print(f"    esperando la ventana del ESP32 (max {timeout} s)...")
+                avisado = True
             time.sleep(3)
         raise TimeoutError(f"timeout esperando fila nueva en '{self.hoja}'")

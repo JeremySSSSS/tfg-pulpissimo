@@ -140,11 +140,19 @@ def cmd_bucles(args):
         wr = csv.writer(fd)
         if new:
             wr.writerow(header)
+        t0 = time.time()
+        total = len(cats) * args.repeats
+        i = 0
         for cat in cats:
             elf = find_elf(cat, DIR_BUCLES)
             for rep in range(1, args.repeats + 1):
-                extra = "(idle wfi)" if cat == "idle" else "(bucle dominado)"
-                print(f"==> {cat} rep {rep}/{args.repeats}  {extra}")
+                i += 1
+                nom = cat if args.repeats == 1 else f"{cat} (rep {rep}/{args.repeats})"
+                eta = ""
+                if i > 1:
+                    falta = (time.time() - t0) / (i - 1) * (total - i + 1)
+                    eta = f"   [faltan ~{falta/60:.0f} min]"
+                print(f"==> [{i:2d}/{total}] {nom}{eta}")
                 P_med, T, cont, tstr = medir_uno(cat, elf, inbox)
                 runs[cat].append({"P_med": P_med, "T": T, "cont": cont, "temp": tstr})
                 ts = time.strftime("%Y-%m-%d %H:%M:%S")
@@ -154,7 +162,14 @@ def cmd_bucles(args):
                 subir_sheet("bucles", categoria=cat, rep=rep, P_med_W=f"{P_med:.6f}",
                             T_s=f"{T:.6f}", temp_C=tstr,
                             **{k: cont[k] for k in modelo.COLS_CONTADORES})
-                print(f"    P_med = {P_med:.4f} W   T = {T:.1f} s")
+                die = f"   die {tstr} C" if tstr else ""
+                if cat == "idle":
+                    print(f"    P = {P_med:.4f} W  (linea base de la sesion){die}")
+                else:
+                    sobre = (P_med - runs["idle"][0]["P_med"]) * 1e3 \
+                        if runs.get("idle") else None
+                    txt = f"  ({sobre:+6.1f} mW sobre idle)" if sobre is not None else ""
+                    print(f"    P = {P_med:.4f} W{txt}   ventana {T:5.1f} s{die}")
                 time.sleep(3)
 
     P_idle = statistics.mean(r["P_med"] for r in runs["idle"])
@@ -210,11 +225,15 @@ def cmd_bucles(args):
                 unidad = "J/ciclo" if cat == "div" else "J/instr"
                 w.writerow([cat, f"{coefs[cat]:.6e}", unidad])
 
-    print(f"\nP_idle = {P_idle:.4f} W")
+    tstr = f" @ {T_idle:.1f} C" if T_idle is not None else ""
+    print(f"\n=== M1 bucles: coeficientes de la sesion ===")
+    print(f"P_idle = {P_idle:.4f} W{tstr}   (n_idle = {len(runs['idle'])})")
+    print(f"{'categoria':10s} {'delta[mW]':>10s} {'eventos':>15s} {'coef[nJ]':>9s}  unidad     reps")
     for cat, delta, denom, coef, n in resumen:
-        unidad = "J/ciclo" if cat == "div" else "J/instr"
-        print(f"  {cat:6s} delta={delta*1e3:7.3f} mW  denom={denom:.0f}  coef={coef:.6e} {unidad}  (n={n})")
+        unidad = "nJ/ciclo" if cat == "div" else "nJ/instr"
+        print(f"{cat:10s} {delta*1e3:10.2f} {denom:15,.0f} {coef*1e9:9.3f}  {unidad:9s} {n}")
     print(f"\nGuardado: {datos_csv}, {coef_csv} + pestaña 'bucles' del Sheet.")
+    print(f"siguiente paso: python3 verificar.py --metodo bucles <benchmarks>")
 
 
 # --- metodo 2: regresion con linea base fija ---------------------------------
@@ -253,14 +272,41 @@ def _temp_f(s):
 
 
 def leer_datos(datos_csv):
-    """Lee las corridas de datos.csv -> [(prog, P_med, T, cont, temp)] (--refit)."""
-    rows = []
+    """Lee de datos.csv la ULTIMA campana completa -> [(prog, P_med, T, cont,
+    temp)] (--refit). datos.csv acumula TODAS las campanas historicas: mezclar
+    campanas (o filas de pares) en un re-ajuste da basura. Cada campana empieza
+    con su fila 'idle' (protocolo), asi que se toma desde el ultimo idle que
+    encabece un bloque con >= DYN+1 corridas de calibracion."""
+    todas = []
     with open(datos_csv) as f:
         for r in csv.DictReader(f):
+            if r["programa"].startswith(("ctrl_", "mulh_")):
+                continue                       # pares: medicion, no calibracion
             cont = {k: int(r[k]) for k in modelo.COLS_CONTADORES}
-            rows.append((r["programa"], float(r["P_med_W"]), cont["mcycle"] / F_CLK,
-                         cont, r.get("temp_C", "")))
-    return rows
+            T = cont["mcycle"] / F_CLK
+            # mismo ajuste de ventana que medir_uno: mcycle se congela en wfi
+            if r["programa"].endswith("_d60"):
+                T /= 0.60
+            elif r["programa"].endswith("_d30"):
+                T /= 0.30
+            todas.append((r["programa"], float(r["P_med_W"]), T,
+                          cont, r.get("temp_C", "")))
+    campanas = []
+    for fila in todas:
+        if fila[0] == "idle" or not campanas:
+            campanas.append([])
+        campanas[-1].append(fila)
+    completas = [c for c in campanas
+                 if sum(1 for f in c if f[0] != "idle") >= len(DYN) + 1]
+    if not completas:
+        sys.exit(f"{datos_csv}: ninguna campana completa (idle + >={len(DYN)+1} corridas)")
+    mayor = max(len(c) for c in completas)
+    if len(completas[-1]) < mayor:
+        print(f"[AVISO] la ultima campana tiene {len(completas[-1])} corridas pero "
+              f"hay una anterior con {mayor}: parece PARCIAL (abortada). El refit "
+              f"usa la ultima igual; si no era la intencion, borra sus filas de "
+              f"datos.csv o vuelve a medir.")
+    return completas[-1]
 
 
 def ajustar_efimon(cal_rows, idle_rows):
@@ -367,9 +413,17 @@ def medir_regresion(progs, no_build, datos_csv):
         wr = csv.writer(fd)
         if new:
             wr.writerow(header)
+        t0 = time.time()
+        P_idle_ses = None                      # primera corrida idle de la sesion
         for i, prog in enumerate(progs, 1):
-            extra = "" if prog == "idle" else ""
-            print(f"==> [{i}/{len(progs)}] {prog} por JTAG...{extra}")
+            duty = "int. 60%" if prog.endswith("_d60") else \
+                   "int. 30%" if prog.endswith("_d30") else \
+                   "linea base" if prog == "idle" else "int. 100%"
+            eta = ""
+            if i > 1:
+                falta = (time.time() - t0) / (i - 1) * (len(progs) - i + 1)
+                eta = f"   [faltan ~{falta/60:.0f} min]"
+            print(f"==> [{i:2d}/{len(progs)}] {prog:14s} ({duty}){eta}")
             P_med, T, cont, tstr = medir_uno(prog, elfs[prog], inbox)
             rows.append((prog, P_med, T, cont, tstr))
             ts = time.strftime("%Y-%m-%d %H:%M:%S")
@@ -378,10 +432,17 @@ def medir_regresion(progs, no_build, datos_csv):
             fd.flush()
             subir_sheet("regresion", programa=prog, P_med_W=f"{P_med:.6f}", T_s=f"{T:.6f}",
                         temp_C=tstr, **{k: cont[k] for k in modelo.COLS_CONTADORES})
-            if tstr:
-                print(f"    temp die = {tstr} C")
-            print(f"    P_med = {P_med:.4f} W   T = {T:.1f} s")
+            die = f"   die {tstr} C" if tstr else ""
+            if prog == "idle":
+                P_idle_ses = P_med
+                print(f"    P = {P_med:.4f} W  (linea base de la sesion){die}")
+            else:
+                sobre = f"  ({(P_med-P_idle_ses)*1e3:+6.1f} mW sobre idle)" \
+                        if P_idle_ses is not None else ""
+                print(f"    P = {P_med:.4f} W{sobre}   ventana {T:5.1f} s{die}")
             time.sleep(3)
+    print(f"\ncampana de medicion: {len(progs)} corridas en "
+          f"{(time.time()-t0)/60:.0f} min")
     return rows
 
 
@@ -393,7 +454,8 @@ def cmd_regresion(args):
         if not os.path.exists(datos_csv):
             sys.exit(f"no existe {datos_csv}; corre la medicion primero (sin --refit)")
         rows = leer_datos(datos_csv)
-        print(f"--refit: {len(rows)} corridas leidas de datos.csv")
+        print(f"--refit: ultima campana completa de datos.csv "
+              f"({len(rows)} corridas, sin volver a medir)")
     else:
         progs = args.programas or DEFAULT_PROGS
         if len(progs) < len(DYN) + 1:
@@ -430,18 +492,22 @@ def cmd_regresion(args):
     if len(cal_rows) < len(DYN) + 1:
         sys.exit(f"solo {len(cal_rows)} programas de calibracion; hacen falta >= {len(DYN)+1}")
 
+    print(f"\n=== ajuste M2 [modelo {args.modelo}] ===")
     if args.modelo == "efimon":
         if not idle_rows:
             sys.exit("--modelo efimon necesita la corrida de idle en sesion (--pidle medir)")
         coefs, info = ajustar_efimon(cal_rows, idle_rows)
-        print(f"  modelo efimon: P_static (intercepto) = {info['P_idle']:.4f} W "
-              f"(idle medido: {P_idle:.4f} W)")
+        dif = (info["P_idle"] - P_idle) * 1e3
+        print(f"P_static (intercepto ajustado) = {info['P_idle']:.4f} W   "
+              f"(idle medido {P_idle:.4f} W, diferencia {dif:+.1f} mW)")
         P_idle = info["P_idle"]
     elif args.modelo == "diferencial":
         coefs, info = ajustar_diferencial(cal_rows, P_idle)
-        print(f"  modelo diferencial: alfa (costo base/instr) = {info['alfa']*1e9:.3f} nJ")
+        print(f"alfa (costo base por instruccion) = {info['alfa']*1e9:.3f} nJ   "
+              f"P_idle = {P_idle:.4f} W (fijo, de '{fuente}')")
     else:
         coefs, info = ajustar(cal_rows, P_idle)
+        print(f"P_idle = {P_idle:.4f} W (fijo, de '{fuente}'; sin intercepto)")
 
     with open(coef_csv, "w", newline="") as f:
         wc = csv.writer(f)
@@ -462,17 +528,34 @@ def cmd_regresion(args):
         if "div_n" in coefs:
             wc.writerow(["div_n", f"{coefs['div_n']:.6e}", "J/instr"])
 
-    print(f"  {len(cal_rows)} programas de calibracion:  R2(vs0)={info['r2']:.4f}  "
-          f"RMSE={info['rmse']*1e3:.2f} mW  cond={info['cond']:.1f}")
+    print(f"{len(cal_rows)} corridas de calibracion"
+          + (f" + {len(idle_rows)} idle" if args.modelo == "efimon" and idle_rows else "")
+          + f":  R2={info['r2']:.4f}  RMSE={info['rmse']*1e3:.2f} mW  "
+            f"cond={info['cond']:.1f}")
+
+    # soporte = en cuantos programas base (sin variantes de intensidad) la
+    # categoria esta activa: con soporte bajo el coeficiente es fragil
+    base = [r for r in cal_rows if not r[0].endswith(("_d60", "_d30"))]
+    print(f"\n{'categoria':10s} {'coef[nJ]':>9s}  unidad     soporte")
     for c in DYN:
-        unidad = "J/ciclo" if c == "div" else "J/instr"
-        flag = "  <-- NEGATIVO (soporte debil / anti-correlacion)" if coefs[c] < 0 else ""
-        print(f"  {c:6s} {coefs[c]:+.6e} {unidad}{flag}")
-    print("\nresiduos por corrida (medido - ajustado):")
-    for r, pa in zip(cal_rows, info["pred_abs"]):
+        unidad = "nJ/ciclo" if c == "div" else "nJ/instr"
+        sop = sum(1 for r in base if r[3][REGR[c]] > 0)
+        flag = "   <-- NEGATIVO (soporte debil / anti-correlacion)" if coefs[c] < 0 else ""
+        print(f"{c:10s} {coefs[c]*1e9:9.3f}  {unidad:9s} {sop:2d}/{len(base)} programas{flag}")
+
+    print("\nresiduos del ajuste (medido - ajustado), peores primero:")
+    print(f"{'programa':16s} {'med[W]':>8s} {'fit[W]':>8s} {'resid[mW]':>10s} {'resid[%]':>9s}")
+    pares_rp = sorted(zip(cal_rows, info["pred_abs"]),
+                      key=lambda rp: -abs(rp[0][1] - rp[1]))
+    for r, pa in pares_rp:
         prog, P_med = r[0], r[1]
-        print(f"  {prog:14s} med={P_med:7.4f}  fit={pa:7.4f}  resid={(P_med-pa)*1e3:+7.2f} mW")
-    print(f"\nGuardado: {coef_csv}")
+        print(f"{prog:16s} {P_med:8.4f} {pa:8.4f} {(P_med-pa)*1e3:+10.2f} "
+              f"{100*(P_med-pa)/P_med:+9.3f}")
+    peor = pares_rp[0]
+    print(f"\npeor residuo: {peor[0][0]} "
+          f"({(peor[0][1]-peor[1])*1e3:+.2f} mW = {100*(peor[0][1]-peor[1])/peor[0][1]:+.3f}%)")
+    print(f"Guardado: {coef_csv}")
+    print("siguiente paso: python3 verificar.py --metodo regresion <benchmarks>")
 
 
 # --- entrada ------------------------------------------------------------------

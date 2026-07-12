@@ -131,22 +131,31 @@ def estabilidad(juegos):
 
 
 def tabla(nombre, juegos):
-    print(f"\n== {nombre}: {len(juegos)} campanas ==")
-    print("  " + " ".join(f"{j['_fecha'][5:]:>12}" for j in juegos))
-    print(f"{'cat':6} " + " ".join(f"{'[nJ]':>12}" for _ in juegos) + f" {'CV%':>7}")
+    print(f"\n=== {nombre}: {len(juegos)} campanas ===")
+    if not juegos:
+        print("  (ninguna campana valida en datos.csv)")
+        return
+    # coeficientes en nJ, campana por columna; media y CV% (dispersion) al final
+    print(f"{'categoria':10s} " + " ".join(f"{j['_fecha'][5:]:>12s}" for j in juegos)
+          + f" | {'media':>8s} {'CV%':>6s}  soporte")
     for c in CATS:
         vals = [j[c] * 1e9 for j in juegos if c in j]
         if not vals:
             continue
-        fila = " ".join(f"{j[c]*1e9:12.3f}" if c in j else f"{'--':>12}" for j in juegos)
-        print(f"{c:6} {fila} {cv(vals):7.1f}   (soporte {SOPORTE[c]})")
+        fila = " ".join(f"{j[c]*1e9:12.3f}" if c in j else f"{'--':>12s}" for j in juegos)
+        cvtxt = f"{cv(vals):6.1f}" if len(vals) > 1 else f"{'--':>6s}"
+        print(f"{c:10s} {fila} | {np.mean(vals):8.3f} {cvtxt}  {SOPORTE[c]:2d} prog")
+    print("(CV% = desviacion estandar / media entre campanas; -- = 1 sola campana)")
 
 
 if __name__ == "__main__":
     j2 = m2()
-    tabla("M2 efimon", j2)
+    tabla("M2 efimon (re-ajuste por campana de regresion/datos.csv)", j2)
     if len(j2) > 1:
-        print("\n  estabilidad de prediccion (mismas corridas de validacion):")
+        print("\nestabilidad de PREDICCION: cada juego de coeficientes evaluado sobre"
+              "\nlas MISMAS corridas de validacion del 11-jul (offline, sin banco):")
         for f, m, s in estabilidad(j2):
-            print(f"    {f}:  |e|={m:.3f}%  sesgo={s:+.3f}%")
-    tabla("M1 bucles (binarios definitivos)", m1())
+            print(f"  coefs de {f}:  |error| medio = {m:.3f}%   sesgo = {s:+.3f}%")
+        print("(si los CV altos de arriba NO se reflejan aqui, la inestabilidad vive"
+              "\n en direcciones que los programas reales no exploran)")
+    tabla("M1 bucles (binarios definitivos, bucles/datos.csv)", m1())
