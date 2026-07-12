@@ -114,26 +114,14 @@ def cmd_de(req):
             cmd += ["--repeats", str(min(rep, 30))]
         if req.get("nobuild"):
             cmd.append("--no-build")
-        return f"M1 bucles ({','.join(cats)})", [cmd]
+        return en_campanas(f"M1 bucles ({','.join(cats)})", cmd, req)
     if a == "m2":
-        modelo_ = req.get("modelo", "efimon")
-        if modelo_ not in ("clasico", "diferencial", "efimon"):
-            raise ValueError("modelo invalido")
+        # solo el modelo OFICIAL de la tesis (efimon); los otros quedan en la CLI
         progs = [p for p in req.get("progs", []) if p in PROGS_M2] or PROGS_M2
-        cmd = PY + ["caracterizar.py", "regresion", "--modelo", modelo_] + progs
-        if req.get("refit"):
-            cmd.append("--refit")
+        cmd = PY + ["caracterizar.py", "regresion", "--modelo", "efimon"] + progs
         if req.get("nobuild"):
             cmd.append("--no-build")
-        if req.get("refit"):
-            return "M2 refit (sin hardware)", [cmd]
-        # N campanas EN SECUENCIA (reproducibilidad): la 1.a compila (salvo que
-        # ya se pidiera no hacerlo); las demas con --no-build -> ELF identicos
-        n = min(max(int(req.get("campanas", 1)), 1), 10)
-        cmds = [cmd] + [cmd + ["--no-build"] if "--no-build" not in cmd else cmd
-                        for _ in range(n - 1)]
-        suf = f" x{n} campanas" if n > 1 else ""
-        return f"M2 regresion [{modelo_}]{suf}", cmds
+        return en_campanas("M2 regresion [efimon]", cmd, req)
     if a == "verificar":
         met = req.get("metodo")
         if met not in ("bucles", "regresion"):
@@ -146,11 +134,17 @@ def cmd_de(req):
             raise ValueError("elegi al menos un benchmark")
         return (f"Verificar {met} ({len(progs)} prog)",
                 [PY + ["verificar.py", "--metodo", met, "--pidle", pidle] + progs])
-    if a == "pares":
-        return "Pares diferenciales", [PY + ["pares.py"]]
-    if a == "repro":
-        return "Reproducibilidad (analisis, sin hardware)", [PY + ["reproducibilidad.py"]]
     raise ValueError(f"accion desconocida: {a}")
+
+
+def en_campanas(nombre, cmd, req):
+    """N campanas EN SECUENCIA: la 1.a compila (salvo --no-build explicito);
+    las demas siempre con --no-build -> binarios identicos entre campanas."""
+    n = min(max(int(req.get("campanas", 1)), 1), 10)
+    cmds = [cmd] + [cmd + ["--no-build"] if "--no-build" not in cmd else cmd
+                    for _ in range(n - 1)]
+    suf = f" x{n} campanas" if n > 1 else ""
+    return nombre + suf, cmds
 
 
 # ---------------- estado (coeficientes + ultima validacion) -----------------
@@ -220,22 +214,22 @@ def pagina():
 <div class="card"><h2>Caracterizar &mdash; M1 (bucles)</h2>
  <div>{chk(CATS, "m1cat")}</div>
  <div class="fila">repeticiones <input type="number" id="m1rep" value="1" min="1" max="30" style="width:52px">
+  campanas <input type="number" id="m1n" value="1" min="1" max="10" style="width:52px">
   <label class="chip"><input type="checkbox" id="m1nb">no recompilar</label>
   <button onclick="m1()">Caracterizar M1</button></div>
- <div class="nota">~15 min con todas las categorias (reps=1)</div></div>
+ <div class="nota">~15 min por campana con todas las categorias (reps=1); cada campana
+  guarda su juego de coeficientes en bucles/campanas/</div></div>
 
 <div class="card"><h2>Caracterizar &mdash; M2 (regresion)</h2>
- <div class="fila">modelo <select id="m2mod"><option value="efimon" selected>efimon (oficial)</option>
-  <option value="clasico">clasico</option><option value="diferencial">diferencial</option></select>
-  campanas <input type="number" id="m2n" value="1" min="1" max="10" style="width:52px">
+ <div class="fila">modelo: <b>efimon</b> (barrido de intensidad, el oficial)
+  &nbsp; campanas <input type="number" id="m2n" value="1" min="1" max="10" style="width:52px">
   <label class="chip"><input type="checkbox" id="m2nb">no recompilar</label></div>
  <details><summary style="font-size:12px;cursor:pointer;color:#9fb0c0">programas (15)</summary>
   <div>{chk(PROGS_M2, "m2prog")}</div></details>
- <div class="fila"><button onclick="m2(false)">Caracterizar M2</button>
-  <button onclick="m2(true)" style="background:#3a4a5c">Solo re-ajuste (sin banco)</button></div>
+ <div class="fila"><button onclick="m2()">Caracterizar M2</button></div>
  <div class="nota">efimon: 15 programas &times; 3 intensidades + idle &asymp; 30 min por campana.
-  Con campanas &gt; 1 se corren en secuencia (reproducibilidad); analizar luego con
-  el boton Reproducibilidad.</div></div>
+  Con campanas &gt; 1 se corren en secuencia; cada campana guarda su juego de
+  coeficientes en regresion/campanas/</div></div>
 
 <div class="card"><h2>Verificar (benchmarks)</h2>
  <div class="fila">metodo <select id="vmet"><option value="regresion">M2 regresion</option>
@@ -246,10 +240,6 @@ def pagina():
  <div class="fila"><button onclick="verificar()">Verificar</button>
   <button onclick="marcar('vprog',true)" style="background:#3a4a5c">todos</button>
   <button onclick="marcar('vprog',false)" style="background:#3a4a5c">ninguno</button></div></div>
-
-<div class="card"><h2>Analisis</h2>
- <div class="fila"><button onclick="lanzar({{accion:'pares'}})">Pares diferenciales</button>
-  <button onclick="lanzar({{accion:'repro'}})" style="background:#3a4a5c">Reproducibilidad (sin banco)</button></div></div>
 
 <div class="card"><h2>Estado</h2><div id="estado">cargando...</div></div>
 
@@ -268,9 +258,10 @@ async function lanzar(req){{
  if(!j.ok) alert(j.msg); else {{n=0;$('log').textContent='';}}
  programar(100);   // UN solo lazo de sondeo (dos en paralelo duplican lineas)
 }}
-function m1(){{lanzar({{accion:'m1',cats:sel('m1cat'),repeats:+$('m1rep').value,nobuild:$('m1nb').checked}})}}
-function m2(refit){{lanzar({{accion:'m2',modelo:$('m2mod').value,progs:sel('m2prog'),
- campanas:refit?1:+$('m2n').value,refit:refit,nobuild:refit||$('m2nb').checked}})}}
+function m1(){{lanzar({{accion:'m1',cats:sel('m1cat'),repeats:+$('m1rep').value,
+ campanas:+$('m1n').value,nobuild:$('m1nb').checked}})}}
+function m2(){{lanzar({{accion:'m2',progs:sel('m2prog'),
+ campanas:+$('m2n').value,nobuild:$('m2nb').checked}})}}
 function verificar(){{lanzar({{accion:'verificar',metodo:$('vmet').value,
  pidle:$('vpidle').value,progs:sel('vprog')}})}}
 async function detener(){{await fetch('/stop',{{method:'POST'}})}}

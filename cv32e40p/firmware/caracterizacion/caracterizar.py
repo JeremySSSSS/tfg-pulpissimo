@@ -20,6 +20,7 @@ Uso:
 import argparse
 import csv
 import os
+import shutil
 import statistics
 import subprocess
 import sys
@@ -38,6 +39,17 @@ DIR_BUCLES = os.path.join(HERE, "bucles")
 DIR_REGR = os.path.join(HERE, "regresion")
 
 # --- comun a ambos metodos -------------------------------------------------
+
+def respaldar_coef(coef_csv):
+    """Copia con timestamp en campanas/: coeficientes.csv se sobreescribe en
+    cada campana, pero el juego de CADA campana queda respaldado (para el
+    analisis de reproducibilidad y para poder restaurar un juego anterior)."""
+    d = os.path.join(os.path.dirname(coef_csv), "campanas")
+    os.makedirs(d, exist_ok=True)
+    dst = os.path.join(d, time.strftime("coeficientes_%Y%m%d_%H%M%S.csv"))
+    shutil.copy(coef_csv, dst)
+    return dst
+
 
 def run_make(met_dir):
     subprocess.run(["make", "-B", "all"], cwd=os.path.join(met_dir, "fuentes"), check=True)
@@ -232,7 +244,9 @@ def cmd_bucles(args):
     for cat, delta, denom, coef, n in resumen:
         unidad = "nJ/ciclo" if cat == "div" else "nJ/instr"
         print(f"{cat:10s} {delta*1e3:10.2f} {denom:15,.0f} {coef*1e9:9.3f}  {unidad:9s} {n}")
+    resp = respaldar_coef(coef_csv)
     print(f"\nGuardado: {datos_csv}, {coef_csv} + pestaña 'bucles' del Sheet.")
+    print(f"copia de esta campana: {os.path.relpath(resp, HERE)}")
     print(f"siguiente paso: python3 verificar.py --metodo bucles <benchmarks>")
 
 
@@ -554,7 +568,9 @@ def cmd_regresion(args):
     peor = pares_rp[0]
     print(f"\npeor residuo: {peor[0][0]} "
           f"({(peor[0][1]-peor[1])*1e3:+.2f} mW = {100*(peor[0][1]-peor[1])/peor[0][1]:+.3f}%)")
+    resp = respaldar_coef(coef_csv)
     print(f"Guardado: {coef_csv}")
+    print(f"copia de esta campana: {os.path.relpath(resp, HERE)}")
     print("siguiente paso: python3 verificar.py --metodo regresion <benchmarks>")
 
 

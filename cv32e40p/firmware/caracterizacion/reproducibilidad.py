@@ -34,6 +34,8 @@ GAP_MIN = 25   # minutos sin corridas => campana nueva
 
 def campanas(path, filtro=None):
     """Agrupa filas por cercania temporal -> lista de campanas (listas de dict)."""
+    if not os.path.exists(path):
+        return []
     rows = [r for r in csv.DictReader(open(path)) if not filtro or filtro(r)]
     rows.sort(key=lambda r: r["fecha"])
     grupos, previo = [], None
@@ -57,7 +59,10 @@ def m2():
     # caracterizar.py): particionar ahi es robusto ante reinicios (una campana
     # abortada no contamina a la siguiente, cosa que el gap temporal no ve).
     # Filas de pares (ctrl_/mulh_) se ignoran: no son de calibracion.
-    rows = [r for r in csv.DictReader(open(os.path.join(HERE, "regresion", "datos.csv")))
+    path = os.path.join(HERE, "regresion", "datos.csv")
+    if not os.path.exists(path):
+        return []
+    rows = [r for r in csv.DictReader(open(path))
             if not r["programa"].startswith(("ctrl_", "mulh_"))]
     rows.sort(key=lambda r: r["fecha"])
     grupos = []
@@ -112,12 +117,26 @@ def m1():
 
 # ---------- estabilidad de prediccion (M2) sobre validacion fija ----------
 def estabilidad(juegos):
-    b = 1.98816419e-3
+    """Evalua cada juego de coeficientes sobre la ULTIMA sesion de validacion
+    registrada en verificacion.csv (mismas corridas para todos los juegos)."""
     IDX = {"n_alu": 8, "n_mul": 9, "n_mulh": 10, "n_div": 11, "c_div": 12,
            "n_mem": 13, "n_ctrl": 14, "n_float": 15, "mcycle": 16}
-    V = [r for r in list(csv.reader(open(os.path.join(HERE, "verificacion.csv"))))[1:]
-         if len(r) >= 17 and r[0] >= "2026-07-11 18:2" and r[0] < "2026-07-11 19"
-         and r[1] == "regresion"]
+    vcsv = os.path.join(HERE, "verificacion.csv")
+    if not os.path.exists(vcsv):
+        return None, []
+    filas = [r for r in list(csv.reader(open(vcsv)))[1:]
+             if len(r) >= 17 and r[1] == "regresion"]
+    if not filas:
+        return None, []
+    # ultima sesion = bloque final de corridas separadas por < 20 min
+    V, previo = [], None
+    for r in reversed(filas):
+        t = datetime.strptime(r[0], "%Y-%m-%d %H:%M:%S")
+        if previo is not None and (previo - t).total_seconds() > 20 * 60:
+            break
+        V.append(r)
+        previo = t
+    V.reverse()
     out = []
     for j in juegos:
         es = []
@@ -127,7 +146,7 @@ def estabilidad(juegos):
             es.append(100 * ((j["_c0"] + pd) - float(r[4])) / float(r[4]))
         e = np.array(es)
         out.append((j["_fecha"], abs(e).mean(), e.mean()))
-    return out
+    return f"{V[0][0][:16]} ({len(V)} corridas)", out
 
 
 def tabla(nombre, juegos):
@@ -152,10 +171,15 @@ if __name__ == "__main__":
     j2 = m2()
     tabla("M2 efimon (re-ajuste por campana de regresion/datos.csv)", j2)
     if len(j2) > 1:
-        print("\nestabilidad de PREDICCION: cada juego de coeficientes evaluado sobre"
-              "\nlas MISMAS corridas de validacion del 11-jul (offline, sin banco):")
-        for f, m, s in estabilidad(j2):
-            print(f"  coefs de {f}:  |error| medio = {m:.3f}%   sesgo = {s:+.3f}%")
-        print("(si los CV altos de arriba NO se reflejan aqui, la inestabilidad vive"
-              "\n en direcciones que los programas reales no exploran)")
+        sesion, res = estabilidad(j2)
+        if sesion is None:
+            print("\n(sin corridas de validacion M2 en verificacion.csv todavia: "
+                  "corre 'verificar' y repite este analisis)")
+        else:
+            print(f"\nestabilidad de PREDICCION: cada juego de coeficientes evaluado"
+                  f"\nsobre la misma sesion de validacion [{sesion}]:")
+            for f, m, s in res:
+                print(f"  coefs de {f}:  |error| medio = {m:.3f}%   sesgo = {s:+.3f}%")
+            print("(si los CV altos de arriba NO se reflejan aqui, la inestabilidad vive"
+                  "\n en direcciones que los programas reales no exploran)")
     tabla("M1 bucles (binarios definitivos, bucles/datos.csv)", m1())
