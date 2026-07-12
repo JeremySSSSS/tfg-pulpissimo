@@ -40,6 +40,7 @@ class Trabajo:
     def __init__(self):
         self.lock = threading.Lock()
         self.proc = None
+        self.cola = []         # comandos pendientes (tandas multiples)
         self.nombre = ""
         self.log = []          # lineas acumuladas de la corrida actual
         self.inicio = None
@@ -47,26 +48,45 @@ class Trabajo:
     def corriendo(self):
         return self.proc is not None and self.proc.poll() is None
 
-    def lanzar(self, nombre, cmd):
+    def corriendo_o_encolado(self):
+        return self.corriendo() or self.cola
+
+    def lanzar(self, nombre, cmds):
+        """cmds: lista de argv a correr EN SECUENCIA (p.ej. N campanas).
+        Se aborta la cola si un comando falla o si el usuario detiene."""
         with self.lock:
-            if self.corriendo():
+            if self.corriendo_o_encolado():
                 return False, f"ya hay un trabajo corriendo: {self.nombre}"
             self.nombre, self.log, self.inicio = nombre, [], time.time()
+            self.cola = list(cmds)
+            threading.Thread(target=self._correr_cola, daemon=True).start()
+            return True, "lanzado"
+
+    def _correr_cola(self):
+        total = len(self.cola)
+        i = 0
+        while self.cola:
+            i += 1
+            cmd = self.cola.pop(0)
+            if total > 1:
+                self.log.append(f"===== tanda {i}/{total} =====")
             self.log.append(f"$ {' '.join(cmd)}")
             self.proc = subprocess.Popen(
                 cmd, cwd=HERE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                 text=True, bufsize=1, start_new_session=True)
-            threading.Thread(target=self._leer, daemon=True).start()
-            return True, "lanzado"
-
-    def _leer(self):
-        for linea in self.proc.stdout:
-            self.log.append(linea.rstrip("\n"))
-        rc = self.proc.wait()
+            for linea in self.proc.stdout:
+                self.log.append(linea.rstrip("\n"))
+            rc = self.proc.wait()
+            if rc != 0 and self.cola:
+                self.log.append(f"[GUI] rc={rc}: cancelo las {len(self.cola)} tandas restantes")
+                self.cola = []
         dur = time.time() - self.inicio
         self.log.append(f"--- fin (rc={rc}, {dur/60:.1f} min) ---")
 
     def detener(self):
+        if self.cola:
+            self.log.append(f"[GUI] cola de {len(self.cola)} tandas cancelada")
+            self.cola = []
         if self.corriendo():
             os.killpg(os.getpgid(self.proc.pid), signal.SIGINT)
             self.log.append("[GUI] SIGINT enviado (corte limpio)...")
@@ -81,7 +101,7 @@ PY = [sys.executable, "-u"]
 
 
 def cmd_de(req):
-    """req (dict del cliente) -> (nombre, argv) o lanza ValueError."""
+    """req (dict del cliente) -> (nombre, [argv, ...]) o lanza ValueError."""
     a = req.get("accion")
     if a == "m1":
         cats = [c for c in req.get("cats", []) if c in CATS] or CATS
@@ -91,7 +111,7 @@ def cmd_de(req):
             cmd += ["--repeats", str(min(rep, 30))]
         if req.get("nobuild"):
             cmd.append("--no-build")
-        return f"M1 bucles ({','.join(cats)})", cmd
+        return f"M1 bucles ({','.join(cats)})", [cmd]
     if a == "m2":
         modelo_ = req.get("modelo", "efimon")
         if modelo_ not in ("clasico", "diferencial", "efimon"):
@@ -102,8 +122,15 @@ def cmd_de(req):
             cmd.append("--refit")
         if req.get("nobuild"):
             cmd.append("--no-build")
-        etiqueta = "M2 refit (sin hardware)" if req.get("refit") else f"M2 regresion [{modelo_}]"
-        return etiqueta, cmd
+        if req.get("refit"):
+            return "M2 refit (sin hardware)", [cmd]
+        # N campanas EN SECUENCIA (reproducibilidad): la 1.a compila (salvo que
+        # ya se pidiera no hacerlo); las demas con --no-build -> ELF identicos
+        n = min(max(int(req.get("campanas", 1)), 1), 10)
+        cmds = [cmd] + [cmd + ["--no-build"] if "--no-build" not in cmd else cmd
+                        for _ in range(n - 1)]
+        suf = f" x{n} campanas" if n > 1 else ""
+        return f"M2 regresion [{modelo_}]{suf}", cmds
     if a == "verificar":
         met = req.get("metodo")
         if met not in ("bucles", "regresion"):
@@ -115,11 +142,11 @@ def cmd_de(req):
         if not progs:
             raise ValueError("elegi al menos un benchmark")
         return (f"Verificar {met} ({len(progs)} prog)",
-                PY + ["verificar.py", "--metodo", met, "--pidle", pidle] + progs)
+                [PY + ["verificar.py", "--metodo", met, "--pidle", pidle] + progs])
     if a == "pares":
-        return "Pares diferenciales", PY + ["pares.py"]
+        return "Pares diferenciales", [PY + ["pares.py"]]
     if a == "repro":
-        return "Reproducibilidad (analisis, sin hardware)", PY + ["reproducibilidad.py"]
+        return "Reproducibilidad (analisis, sin hardware)", [PY + ["reproducibilidad.py"]]
     raise ValueError(f"accion desconocida: {a}")
 
 
@@ -197,12 +224,15 @@ def pagina():
 <div class="card"><h2>Caracterizar &mdash; M2 (regresion)</h2>
  <div class="fila">modelo <select id="m2mod"><option value="efimon" selected>efimon (oficial)</option>
   <option value="clasico">clasico</option><option value="diferencial">diferencial</option></select>
+  campanas <input type="number" id="m2n" value="1" min="1" max="10" style="width:52px">
   <label class="chip"><input type="checkbox" id="m2nb">no recompilar</label></div>
  <details><summary style="font-size:12px;cursor:pointer;color:#9fb0c0">programas (15)</summary>
   <div>{chk(PROGS_M2, "m2prog")}</div></details>
  <div class="fila"><button onclick="m2(false)">Caracterizar M2</button>
   <button onclick="m2(true)" style="background:#3a4a5c">Solo re-ajuste (sin banco)</button></div>
- <div class="nota">efimon: 15 programas &times; 3 intensidades + idle &asymp; 30 min</div></div>
+ <div class="nota">efimon: 15 programas &times; 3 intensidades + idle &asymp; 30 min por campana.
+  Con campanas &gt; 1 se corren en secuencia (reproducibilidad); analizar luego con
+  el boton Reproducibilidad.</div></div>
 
 <div class="card"><h2>Verificar (benchmarks)</h2>
  <div class="fila">metodo <select id="vmet"><option value="regresion">M2 regresion</option>
@@ -237,7 +267,7 @@ async function lanzar(req){{
 }}
 function m1(){{lanzar({{accion:'m1',cats:sel('m1cat'),repeats:+$('m1rep').value,nobuild:$('m1nb').checked}})}}
 function m2(refit){{lanzar({{accion:'m2',modelo:$('m2mod').value,progs:sel('m2prog'),
- refit:refit,nobuild:refit||$('m2nb').checked}})}}
+ campanas:refit?1:+$('m2n').value,refit:refit,nobuild:refit||$('m2nb').checked}})}}
 function verificar(){{lanzar({{accion:'verificar',metodo:$('vmet').value,
  pidle:$('vpidle').value,progs:sel('vprog')}})}}
 async function detener(){{await fetch('/stop',{{method:'POST'}})}}
@@ -299,7 +329,8 @@ class H(BaseHTTPRequestHandler):
                     desde = int(kv[6:])
             mins = f"{(time.time()-JOB.inicio)/60:.1f}" if JOB.inicio else "0"
             self._json({"lineas": JOB.log[desde:], "n": len(JOB.log),
-                        "corriendo": JOB.corriendo(), "nombre": JOB.nombre, "min": mins})
+                        "corriendo": bool(JOB.corriendo_o_encolado()),
+                        "nombre": JOB.nombre, "min": mins})
         elif u.path == "/estado":
             self._json(estado())
         else:
