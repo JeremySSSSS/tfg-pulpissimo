@@ -402,10 +402,13 @@ def cmd_regresion(args):
         # con --pidle medir, idle.elf va PRIMERO en la misma sesion (mismo piso)
         if args.modelo == "efimon":
             progs = [v for q in progs for v in (q, q + "_d60", q + "_d30")]
-            # pares diferenciales al set: filas que varian UNA categoria a la
-            # vez (ctrl 8:1; mulh con/sin) -> anclan la atribucion de las
-            # categorias en disputa con datos, sin trasplantes manuales
-            progs += ["ctrl_rolled", "ctrl_unrolled", "mulh_con", "mulh_sin"]
+            # Pares diferenciales al set SOLO con --pares: probado el 11-jul,
+            # DEGRADA la validacion (+0.27% de sesgo): el alu de los nucleos
+            # sinteticos densos no cuesta lo mismo que el alu de codigo
+            # compilado (heterogeneidad intra-categoria). Los pares quedan como
+            # instrumento de MEDICION (pares.py), no de calibracion.
+            if args.pares:
+                progs += ["ctrl_rolled", "ctrl_unrolled", "mulh_con", "mulh_sin"]
         run_list = (["idle"] + progs) if args.pidle == "medir" else progs
         rows = medir_regresion(run_list, args.no_build, datos_csv)
 
@@ -489,6 +492,9 @@ def main():
     ar = sub.add_parser("regresion", aliases=["2"], help="M2: regresion sobre programas mixtos")
     ar.add_argument("programas", nargs="*", default=DEFAULT_PROGS,
                     help="conjunto de calibracion; si se omite usa el por defecto")
+    ar.add_argument("--pares", action="store_true",
+                    help="(experimental) incluye los pares diferenciales en la "
+                         "calibracion efimon; probado que degrada la validacion")
     ar.add_argument("--modelo", default="clasico", choices=["clasico", "diferencial", "efimon"],
                     help="ajuste: 'clasico' (tasas por categoria, lstsq) o "
                          "'diferencial' (alfa*r_total + sobrecostos, NNLS) o "
