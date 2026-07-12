@@ -83,8 +83,11 @@ def main():
     # archivo con marca temporal (analogo a campanas/ de los coeficientes)
     d_tandas = os.path.join(HERE, "validaciones")
     os.makedirs(d_tandas, exist_ok=True)
+    # el modo de linea base va en el nombre: dos tandas con/sin correccion
+    # termica son experimentos DISTINTOS y deben distinguirse sin adivinar
+    modo = args.pidle if args.pidle in ("temp", "medir", "archivo") else "fija"
     tanda_csv = os.path.join(
-        d_tandas, time.strftime(f"validacion_{met}_%Y%m%d_%H%M%S.csv"))
+        d_tandas, time.strftime(f"validacion_{met}_{modo}_%Y%m%d_%H%M%S.csv"))
     ftanda = open(tanda_csv, "w", newline="")
     wt = csv.writer(ftanda)
     wt.writerow(header)
