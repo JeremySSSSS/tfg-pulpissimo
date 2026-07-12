@@ -96,7 +96,19 @@ def m2():
 
 # ---------- M1 (bucles: coeficiente por campana, binarios definitivos) ----------
 def m1():
-    grupos = campanas(os.path.join(HERE, "bucles", "datos.csv"))
+    # igual que en M2: cada campana EMPIEZA con idle (robusto a campanas
+    # consecutivas con huecos cortos). Idles CONSECUTIVOS (--repeats) no abren
+    # campana nueva: solo un idle que sigue a una categoria distinta.
+    path = os.path.join(HERE, "bucles", "datos.csv")
+    if not os.path.exists(path):
+        return []
+    rows = sorted(csv.DictReader(open(path)), key=lambda r: r["fecha"])
+    grupos, previa = [], None
+    for r in rows:
+        if not grupos or (r["categoria"] == "idle" and previa != "idle"):
+            grupos.append([])
+        grupos[-1].append(r)
+        previa = r["categoria"]
     juegos = []
     for g in grupos:
         idle = [float(r["P_med_W"]) for r in g if r["categoria"] == "idle"]
