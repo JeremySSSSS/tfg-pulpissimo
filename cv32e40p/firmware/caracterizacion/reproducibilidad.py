@@ -1,0 +1,141 @@
+#!/usr/bin/env python3
+"""Reproducibilidad de coeficientes entre CAMPANAS (experimento de dispersion).
+
+Agrupa las corridas de datos.csv en campanas (por cercania temporal), re-ajusta
+cada campana con su metodo, y reporta por categoria: coeficiente de cada
+campana, media y CV%% (dispersion observada). Para M2 evalua ademas cada juego
+sobre las MISMAS corridas de validacion (estabilidad de prediccion offline).
+
+Uso:  python3 reproducibilidad.py
+"""
+import csv
+import os
+import sys
+from datetime import datetime
+
+import numpy as np
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(HERE, "comun"))
+sys.path.insert(0, HERE)
+import caracterizar as C   # noqa: E402
+
+CATS = ["alu", "mul", "mulh", "div", "mem", "ctrl", "float"]
+NCOL = {"alu": "n_alu", "mul": "n_mul", "mulh": "n_mulh", "div": "c_div",
+        "mem": "n_mem", "ctrl": "n_ctrl", "float": "n_float"}
+SOPORTE = {"alu": 15, "ctrl": 15, "mem": 11, "mul": 5, "div": 4,
+           "mulh": 3, "float": 3}
+# fecha desde la cual el binario de cada bucle M1 es el definitivo
+M1_DESDE = {"alu": "2026-07-05", "div": "2026-07-05", "ctrl": "2026-07-06 18:15",
+            "mul": "2026-07-11", "mulh": "2026-07-11", "mem": "2026-07-11",
+            "float": "2026-07-11"}
+GAP_MIN = 25   # minutos sin corridas => campana nueva
+
+
+def campanas(path, filtro=None):
+    """Agrupa filas por cercania temporal -> lista de campanas (listas de dict)."""
+    rows = [r for r in csv.DictReader(open(path)) if not filtro or filtro(r)]
+    rows.sort(key=lambda r: r["fecha"])
+    grupos, previo = [], None
+    for r in rows:
+        t = datetime.strptime(r["fecha"], "%Y-%m-%d %H:%M:%S")
+        if previo is None or (t - previo).total_seconds() > GAP_MIN * 60:
+            grupos.append([])
+        grupos[-1].append(r)
+        previo = t
+    return grupos
+
+
+def cv(vals):
+    v = np.array(vals)
+    return 100 * v.std(ddof=1) / v.mean() if len(v) > 1 else float("nan")
+
+
+# ---------- M2 (efimon: campanas con variantes _d60) ----------
+def m2():
+    grupos = [g for g in campanas(os.path.join(HERE, "regresion", "datos.csv"))
+              if any(r["programa"].endswith("_d60") for r in g)
+              and not any(r["programa"].startswith(("ctrl_", "mulh_")) for r in g)]
+    juegos = []
+    for g in grupos:
+        cal, idle = [], []
+        for r in g:
+            cont = {k: int(r[k]) for k in NCOL.values()}
+            cont["n_div"] = int(r["n_div"])
+            T = int(r["mcycle"]) / 1e7
+            if r["programa"].endswith("_d60"):
+                T /= 0.60
+            elif r["programa"].endswith("_d30"):
+                T /= 0.30
+            fila = (r["programa"], float(r["P_med_W"]), T, cont, r.get("temp_C", ""))
+            (idle if r["programa"] == "idle" else cal).append(fila)
+        if len(cal) < 40 or not idle:
+            continue
+        coefs, info = C.ajustar_efimon(cal, idle)
+        coefs["_c0"] = info["P_idle"]
+        coefs["_fecha"] = g[0]["fecha"][:16]
+        juegos.append(coefs)
+    return juegos
+
+
+# ---------- M1 (bucles: coeficiente por campana, binarios definitivos) ----------
+def m1():
+    grupos = campanas(os.path.join(HERE, "bucles", "datos.csv"))
+    juegos = []
+    for g in grupos:
+        idle = [float(r["P_med_W"]) for r in g if r["categoria"] == "idle"]
+        if not idle:
+            continue
+        Pi = np.mean(idle)
+        coefs = {"_fecha": g[0]["fecha"][:16]}
+        for c in CATS:
+            rs = [r for r in g if r["categoria"] == c and r["fecha"] >= M1_DESDE[c]]
+            if rs:
+                vals = [(float(r["P_med_W"]) - Pi) * (int(r["mcycle"]) / 1e7)
+                        / int(r[NCOL[c]]) for r in rs]
+                coefs[c] = float(np.mean(vals))
+        if len(coefs) > 1:
+            juegos.append(coefs)
+    return juegos
+
+
+# ---------- estabilidad de prediccion (M2) sobre validacion fija ----------
+def estabilidad(juegos):
+    b = 1.98816419e-3
+    IDX = {"n_alu": 8, "n_mul": 9, "n_mulh": 10, "n_div": 11, "c_div": 12,
+           "n_mem": 13, "n_ctrl": 14, "n_float": 15, "mcycle": 16}
+    V = [r for r in list(csv.reader(open(os.path.join(HERE, "verificacion.csv"))))[1:]
+         if len(r) >= 17 and r[0] >= "2026-07-11 18:2" and r[0] < "2026-07-11 19"
+         and r[1] == "regresion"]
+    out = []
+    for j in juegos:
+        es = []
+        for r in V:
+            T = int(r[IDX["mcycle"]]) / 1e7
+            pd = sum(j[c] * int(r[IDX[NCOL[c]]]) / T for c in CATS)
+            es.append(100 * ((j["_c0"] + pd) - float(r[4])) / float(r[4]))
+        e = np.array(es)
+        out.append((j["_fecha"], abs(e).mean(), e.mean()))
+    return out
+
+
+def tabla(nombre, juegos):
+    print(f"\n== {nombre}: {len(juegos)} campanas ==")
+    print("  " + " ".join(f"{j['_fecha'][5:]:>12}" for j in juegos))
+    print(f"{'cat':6} " + " ".join(f"{'[nJ]':>12}" for _ in juegos) + f" {'CV%':>7}")
+    for c in CATS:
+        vals = [j[c] * 1e9 for j in juegos if c in j]
+        if not vals:
+            continue
+        fila = " ".join(f"{j[c]*1e9:12.3f}" if c in j else f"{'--':>12}" for j in juegos)
+        print(f"{c:6} {fila} {cv(vals):7.1f}   (soporte {SOPORTE[c]})")
+
+
+if __name__ == "__main__":
+    j2 = m2()
+    tabla("M2 efimon", j2)
+    if len(j2) > 1:
+        print("\n  estabilidad de prediccion (mismas corridas de validacion):")
+        for f, m, s in estabilidad(j2):
+            print(f"    {f}:  |e|={m:.3f}%  sesgo={s:+.3f}%")
+    tabla("M1 bucles (binarios definitivos)", m1())
