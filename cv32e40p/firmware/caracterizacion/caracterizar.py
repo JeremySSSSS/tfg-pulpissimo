@@ -429,15 +429,24 @@ def medir_regresion(progs, no_build, datos_csv):
             wr.writerow(header)
         t0 = time.time()
         P_idle_ses = None                      # primera corrida idle de la sesion
+        # ETA por CLASE de corrida: una variante _d30 tarda ~3x mas de reloj
+        # que su version al 100% (misma actividad, estirada con pausas), asi
+        # que un promedio simple sub/sobre-estima segun el orden de la campana
+        clase = lambda p: ("idle" if p == "idle" else
+                           "d60" if p.endswith("_d60") else
+                           "d30" if p.endswith("_d30") else "d100")
+        dur = {}                               # clase -> [duraciones medidas]
         for i, prog in enumerate(progs, 1):
-            duty = "int. 60%" if prog.endswith("_d60") else \
-                   "int. 30%" if prog.endswith("_d30") else \
-                   "linea base" if prog == "idle" else "int. 100%"
+            duty = {"d60": "int. 60%", "d30": "int. 30%", "idle": "linea base",
+                    "d100": "int. 100%"}[clase(prog)]
             eta = ""
-            if i > 1:
-                falta = (time.time() - t0) / (i - 1) * (len(progs) - i + 1)
+            if dur:
+                media = sum(sum(v) for v in dur.values()) / sum(len(v) for v in dur.values())
+                est = lambda c: sum(dur[c]) / len(dur[c]) if dur.get(c) else media
+                falta = sum(est(clase(p)) for p in progs[i - 1:])
                 eta = f"   [faltan ~{falta/60:.0f} min]"
             print(f"==> [{i:2d}/{len(progs)}] {prog:14s} ({duty}){eta}")
+            t_run = time.time()
             P_med, T, cont, tstr = medir_uno(prog, elfs[prog], inbox)
             rows.append((prog, P_med, T, cont, tstr))
             ts = time.strftime("%Y-%m-%d %H:%M:%S")
@@ -454,6 +463,7 @@ def medir_regresion(progs, no_build, datos_csv):
                 sobre = f"  ({(P_med-P_idle_ses)*1e3:+6.1f} mW sobre idle)" \
                         if P_idle_ses is not None else ""
                 print(f"    P = {P_med:.4f} W{sobre}   ventana {T:5.1f} s{die}")
+            dur.setdefault(clase(prog), []).append(time.time() - t_run + 3)
             time.sleep(3)
     print(f"\ncampana de medicion: {len(progs)} corridas en "
           f"{(time.time()-t0)/60:.0f} min")
