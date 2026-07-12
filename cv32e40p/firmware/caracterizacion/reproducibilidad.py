@@ -53,9 +53,20 @@ def cv(vals):
 
 # ---------- M2 (efimon: campanas con variantes _d60) ----------
 def m2():
-    grupos = [g for g in campanas(os.path.join(HERE, "regresion", "datos.csv"))
-              if any(r["programa"].endswith("_d60") for r in g)
-              and not any(r["programa"].startswith(("ctrl_", "mulh_")) for r in g)]
+    # cada campana de regresion EMPIEZA con una fila idle (protocolo de
+    # caracterizar.py): particionar ahi es robusto ante reinicios (una campana
+    # abortada no contamina a la siguiente, cosa que el gap temporal no ve).
+    # Filas de pares (ctrl_/mulh_) se ignoran: no son de calibracion.
+    rows = [r for r in csv.DictReader(open(os.path.join(HERE, "regresion", "datos.csv")))
+            if not r["programa"].startswith(("ctrl_", "mulh_"))]
+    rows.sort(key=lambda r: r["fecha"])
+    grupos = []
+    for r in rows:
+        if r["programa"] == "idle" or not grupos:
+            grupos.append([])
+        grupos[-1].append(r)
+    # solo campanas efimon COMPLETAS (15 programas x 3 intensidades + idle)
+    grupos = [g for g in grupos if any(r["programa"].endswith("_d60") for r in g)]
     juegos = []
     for g in grupos:
         cal, idle = [], []
