@@ -1,11 +1,11 @@
-"# Regresion con linea base fija (M2). Generado 2026-07-08 14:09:22. P_idle FIJO de 'idle medido en sesion (1.1565 W)' (no es incognita); SIN intercepto: delta=P_med-P_idle = sum e_i*(n_i/T). n=15 corridas, R2(vs0)=0.9955, RMSE=1.31 mW, cond=6.3"
+"# Regresion con linea base fija (M2). Generado 2026-07-11 18:16:54. P_idle FIJO de 'idle medido en sesion (1.1520 W)' (no es incognita); SIN intercepto: delta=P_med-P_idle = sum e_i*(n_i/T). n=45 corridas, R2(vs0)=0.9499, RMSE=2.66 mW, cond=7.5"
 parametro,coef,unidad
-P_idle,1.156534,W
-T_idle,43.06,C
-alu,2.534567e-09,J/instr
-mul,5.895963e-10,J/instr
-mulh,9.080555e-09,J/instr
-div,4.924878e-10,J/ciclo
-mem,3.186812e-09,J/instr
-ctrl,7.568555e-09,J/instr
-float,3.395738e-09,J/instr
+P_idle,1.146478,W
+T_idle,39.24,C
+alu,1.825783e-09,J/instr
+mul,1.184400e-09,J/instr
+mulh,3.753257e-09,J/instr
+div,3.364753e-10,J/ciclo
+mem,2.361923e-09,J/instr
+ctrl,8.954818e-09,J/instr
+float,2.791899e-09,J/instr

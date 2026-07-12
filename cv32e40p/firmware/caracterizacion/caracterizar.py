@@ -437,10 +437,13 @@ def cmd_regresion(args):
 
     with open(coef_csv, "w", newline="") as f:
         wc = csv.writer(f)
-        wc.writerow([f"# Regresion con linea base fija (M2). Generado {time.strftime('%Y-%m-%d %H:%M:%S')}."
-                     f" P_idle FIJO de '{fuente}' (no es incognita); SIN intercepto:"
-                     f" delta=P_med-P_idle = sum e_i*(n_i/T). n={len(cal_rows)} corridas,"
-                     f" R2(vs0)={info['r2']:.4f}, RMSE={info['rmse']*1e3:.2f} mW, cond={info['cond']:.1f}"])
+        desc = {"clasico": f"linea base FIJA de '{fuente}', SIN intercepto",
+                "diferencial": "NNLS diferencial (alfa*r_total + sobrecostos)",
+                "efimon": "NNLS CON INTERCEPTO ajustado (P_idle = P_static de la"
+                          " regresion; barrido de intensidad d100/d60/d30)"}[args.modelo]
+        wc.writerow([f"# Regresion (M2, modelo {args.modelo}). Generado {time.strftime('%Y-%m-%d %H:%M:%S')}."
+                     f" {desc}. n={len(cal_rows)} corridas,"
+                     f" R2={info['r2']:.4f}, RMSE={info['rmse']*1e3:.2f} mW, cond={info['cond']:.1f}"])
         wc.writerow(["parametro", "coef", "unidad"])
         wc.writerow(["P_idle", f"{info['P_idle']:.6f}", "W"])
         if T_idle is not None:
