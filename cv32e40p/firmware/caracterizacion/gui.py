@@ -72,7 +72,7 @@ class Trabajo:
             i += 1
             cmd = self.cola.pop(0)
             if total > 1:
-                self.log.append(f"===== tanda {i}/{total} =====")
+                self.log.append(f"===== campana {i}/{total} =====")
             self.log.append(f"$ {' '.join(cmd)}")
             self.proc = subprocess.Popen(
                 cmd, cwd=HERE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -81,14 +81,14 @@ class Trabajo:
                 self.log.append(linea.rstrip("\n"))
             rc = self.proc.wait()
             if rc != 0 and self.cola:
-                self.log.append(f"[GUI] rc={rc}: cancelo las {len(self.cola)} tandas restantes")
+                self.log.append(f"[GUI] rc={rc}: cancelo las {len(self.cola)} campanas restantes")
                 self.cola = []
         dur = time.time() - self.inicio
         self.log.append(f"--- fin (rc={rc}, {dur/60:.1f} min) ---")
 
     def detener(self):
         if self.cola:
-            self.log.append(f"[GUI] cola de {len(self.cola)} tandas cancelada")
+            self.log.append(f"[GUI] cola de {len(self.cola)} campanas cancelada")
             self.cola = []
         if self.corriendo():
             os.killpg(os.getpgid(self.proc.pid), signal.SIGINT)
