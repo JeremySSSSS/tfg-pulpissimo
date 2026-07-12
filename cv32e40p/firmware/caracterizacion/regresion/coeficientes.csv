@@ -1,11 +1,11 @@
-"# Regresion (M2, modelo efimon). Generado 2026-07-11 20:35:35. NNLS CON INTERCEPTO ajustado (P_idle = P_static de la regresion; barrido de intensidad d100/d60/d30). n=45 corridas, R2=0.9821, RMSE=1.74 mW, cond=7.8"
+"# Regresion con linea base fija (M2). Generado 2026-07-11 18:16:54. P_idle FIJO de 'idle medido en sesion (1.1520 W)' (no es incognita); SIN intercepto: delta=P_med-P_idle = sum e_i*(n_i/T). n=45 corridas, R2(vs0)=0.9499, RMSE=2.66 mW, cond=7.5"
 parametro,coef,unidad
-P_idle,1.145799,W
-T_idle,39.61,C
-alu,1.648041e-09,J/instr
-mul,9.757386e-10,J/instr
-mulh,1.068033e-08,J/instr
-div,5.228898e-10,J/ciclo
-mem,3.278048e-09,J/instr
-ctrl,1.007457e-08,J/instr
-float,3.954133e-09,J/instr
+P_idle,1.146478,W
+T_idle,39.24,C
+alu,1.825783e-09,J/instr
+mul,1.184400e-09,J/instr
+mulh,3.753257e-09,J/instr
+div,3.364753e-10,J/ciclo
+mem,2.361923e-09,J/instr
+ctrl,8.954818e-09,J/instr
+float,2.791899e-09,J/instr
