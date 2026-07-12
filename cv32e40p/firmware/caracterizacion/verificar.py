@@ -72,12 +72,22 @@ def main():
     print(f"=== Verificacion (metodo: {met}) ===")
     print(f"  coeficientes: {', '.join(sorted(coef))}")
 
+    header = (["fecha", "metodo", "programa", "T_s", "P_med_W", "P_pred_W",
+               "err_pct", "temp_C"] + modelo.COLS_CONTADORES)
     new = not os.path.exists(VERIF_CSV)
     fcsv = open(VERIF_CSV, "a", newline="")
     wr = csv.writer(fcsv)
     if new:
-        wr.writerow(["fecha", "metodo", "programa", "T_s", "P_med_W", "P_pred_W", "err_pct", "temp_C"]
-                    + modelo.COLS_CONTADORES)
+        wr.writerow(header)
+    # ademas del historico global, cada TANDA de validacion queda en su propio
+    # archivo con marca temporal (analogo a campanas/ de los coeficientes)
+    d_tandas = os.path.join(HERE, "validaciones")
+    os.makedirs(d_tandas, exist_ok=True)
+    tanda_csv = os.path.join(
+        d_tandas, time.strftime(f"validacion_{met}_%Y%m%d_%H%M%S.csv"))
+    ftanda = open(tanda_csv, "w", newline="")
+    wt = csv.writer(ftanda)
+    wt.writerow(header)
 
     inbox = sheet.Inbox()
 
@@ -151,16 +161,21 @@ def main():
         sheet.subir("verificacion", metodo=met, programa=prog, T_s=f"{T:.3f}",
                     P_med_W=f"{pbar:.6f}", P_pred_W=f"{P_pred:.6f}", err_pct=f"{err:.4f}",
                     temp_C=tstr, **{k: cont[k] for k in modelo.COLS_CONTADORES})
-        wr.writerow([ts, met, prog, f"{T:.3f}", f"{pbar:.6f}", f"{P_pred:.6f}", f"{err:.4f}", tstr]
-                    + [cont[k] for k in modelo.COLS_CONTADORES])
+        fila = ([ts, met, prog, f"{T:.3f}", f"{pbar:.6f}", f"{P_pred:.6f}", f"{err:.4f}", tstr]
+                + [cont[k] for k in modelo.COLS_CONTADORES])
+        wr.writerow(fila)
         fcsv.flush()
+        wt.writerow(fila)
+        ftanda.flush()
         print(f"{prog:12s} {pbar:9.4f} {P_din:9.4f} {P_pred:10.4f} {err:7.2f}  {T:5.1f}  {tstr}C")
 
     fcsv.close()
+    ftanda.close()
     if errs:
         print(f"\nerror absoluto medio = {sum(errs)/len(errs):.2f}%   "
               f"max = {max(errs):.2f}%   (objetivo <10%)")
     print(f"Guardado en {VERIF_CSV} y en la pestaña 'verificacion' del Sheet.")
+    print(f"archivo de esta tanda: {os.path.relpath(tanda_csv, HERE)}")
 
 
 if __name__ == "__main__":
