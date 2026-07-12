@@ -46,7 +46,8 @@ def run_make(met_dir):
 def find_elf(prog, met_dir):
     # idle.elf vive en bucles/ (es el run de referencia del piso para ambos)
     for cand in (os.path.join(met_dir, "elf", f"{prog}.elf"),
-                 os.path.join(DIR_BUCLES, "elf", f"{prog}.elf"), prog):
+                 os.path.join(DIR_BUCLES, "elf", f"{prog}.elf"),
+                 os.path.join(HERE, "pares", "elf", f"{prog}.elf"), prog):
         if os.path.exists(cand):
             return cand
     raise FileNotFoundError(f"{prog}.elf no existe (corre 'make' en {met_dir}/fuentes)")
@@ -401,6 +402,10 @@ def cmd_regresion(args):
         # con --pidle medir, idle.elf va PRIMERO en la misma sesion (mismo piso)
         if args.modelo == "efimon":
             progs = [v for q in progs for v in (q, q + "_d60", q + "_d30")]
+            # pares diferenciales al set: filas que varian UNA categoria a la
+            # vez (ctrl 8:1; mulh con/sin) -> anclan la atribucion de las
+            # categorias en disputa con datos, sin trasplantes manuales
+            progs += ["ctrl_rolled", "ctrl_unrolled", "mulh_con", "mulh_sin"]
         run_list = (["idle"] + progs) if args.pidle == "medir" else progs
         rows = medir_regresion(run_list, args.no_build, datos_csv)
 
