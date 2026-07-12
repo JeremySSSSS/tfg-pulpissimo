@@ -224,15 +224,16 @@ def pagina():
  <div class="card" style="margin-bottom:0"><h2>Consola</h2><div id="log"></div></div>
 </div></main>
 <script>
-let n=0, activo=false;
+let n=0, activo=false, timer=null;
 const $=id=>document.getElementById(id);
 const sel=g=>[...document.querySelectorAll(`input[name=${{g}}]:checked`)].map(e=>e.value);
 function marcar(g,v){{document.querySelectorAll(`input[name=${{g}}]`).forEach(e=>e.checked=v)}}
+function programar(ms){{clearTimeout(timer); timer=setTimeout(sondear,ms)}}
 async function lanzar(req){{
  const r=await fetch('/run',{{method:'POST',body:JSON.stringify(req)}});
  const j=await r.json();
  if(!j.ok) alert(j.msg); else {{n=0;$('log').textContent='';}}
- sondear();
+ programar(100);   // UN solo lazo de sondeo (dos en paralelo duplican lineas)
 }}
 function m1(){{lanzar({{accion:'m1',cats:sel('m1cat'),repeats:+$('m1rep').value,nobuild:$('m1nb').checked}})}}
 function m2(refit){{lanzar({{accion:'m2',modelo:$('m2mod').value,progs:sel('m2prog'),
@@ -247,7 +248,7 @@ async function sondear(){{
  activo=j.corriendo;
  $('dot').className=activo?'on':''; $('btnstop').disabled=!activo;
  $('quehace').textContent=activo?j.nombre+' ('+j.min+' min)':'inactivo';
- setTimeout(sondear, activo?700:2500);
+ programar(activo?700:2500);
  if(!activo) refrescarEstado();
 }}
 let ultEstado=0;
