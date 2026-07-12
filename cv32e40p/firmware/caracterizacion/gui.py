@@ -7,7 +7,10 @@ subproceso y la consola muestra su salida en vivo. Un solo trabajo a la vez
 (el banco es exclusivo). Solo escucha en localhost.
 
 Uso:
-    python3 gui.py            # abre http://localhost:8237
+    python3 gui.py            # abre http://localhost:8237 (solo esta PC)
+    python3 gui.py --lan      # ademas accesible desde la red local (telefono):
+                              # http://<IP-de-esta-PC>:8237. OJO: cualquiera en
+                              # tu WiFi podria operar el banco mientras corre.
 """
 import json
 import os
@@ -352,8 +355,19 @@ class H(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    srv = ThreadingHTTPServer(("127.0.0.1", PORT), H)
+    lan = "--lan" in sys.argv
+    if "--puerto" in sys.argv:
+        PORT = int(sys.argv[sys.argv.index("--puerto") + 1])
+    srv = ThreadingHTTPServer(("0.0.0.0" if lan else "127.0.0.1", PORT), H)
     print(f"GUI del banco: http://localhost:{PORT}   (Ctrl-C para salir)")
+    if lan:
+        import socket
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            s.connect(("8.8.8.8", 80))          # no manda nada; solo resuelve la IP local
+            print(f"  desde el telefono (misma WiFi): http://{s.getsockname()[0]}:{PORT}")
+        finally:
+            s.close()
     try:
         srv.serve_forever()
     except KeyboardInterrupt:
