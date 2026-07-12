@@ -345,11 +345,22 @@ class H(BaseHTTPRequestHandler):
             self._json({"err": "no encontrado"}, 404)
 
 
+class Servidor(ThreadingHTTPServer):
+    def handle_error(self, request, client_address):
+        # los navegadores (sobre todo el del telefono al apagar pantalla)
+        # cortan conexiones keep-alive de golpe: no es un error del banco
+        import sys as _sys
+        e = _sys.exc_info()[1]
+        if isinstance(e, (ConnectionResetError, BrokenPipeError, TimeoutError)):
+            return
+        super().handle_error(request, client_address)
+
+
 if __name__ == "__main__":
     lan = "--lan" in sys.argv
     if "--puerto" in sys.argv:
         PORT = int(sys.argv[sys.argv.index("--puerto") + 1])
-    srv = ThreadingHTTPServer(("0.0.0.0" if lan else "127.0.0.1", PORT), H)
+    srv = Servidor(("0.0.0.0" if lan else "127.0.0.1", PORT), H)
     print(f"GUI del banco: http://localhost:{PORT}   (Ctrl-C para salir)")
     if lan:
         import socket
