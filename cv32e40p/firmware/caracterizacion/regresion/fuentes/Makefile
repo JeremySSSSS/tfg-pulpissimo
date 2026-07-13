@@ -77,7 +77,7 @@ $(OUT)/fpoly.elf:     harness.S wl_fpoly.c     platform.inc link.ld
 	$(CC) $(KFLAGS) -march=rv32imfc -ffp-contract=off -DREPS=200000 -o $@ harness.S wl_fpoly.c
 # refuerzo float+mem (ver wl_saxpy.c): region fpgain-like del espacio
 $(OUT)/saxpy.elf:     harness.S wl_saxpy.c     platform.inc link.ld
-	$(CC) $(KFLAGS) -march=rv32imfc -ffp-contract=off -DREPS=85000  -o $@ harness.S wl_saxpy.c
+	$(CC) $(KFLAGS) -march=rv32imfc -ffp-contract=off -DREPS=230000 -o $@ harness.S wl_saxpy.c
 
 clean:
 	rm -f $(ELFS)
