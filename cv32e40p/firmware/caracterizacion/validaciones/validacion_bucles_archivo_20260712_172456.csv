@@ -1,0 +1,3 @@
+fecha,metodo,programa,T_s,P_med_W,P_pred_W,err_pct,temp_C,n_alu,n_mul,n_mulh,n_div,c_div,n_mem,n_ctrl,n_float,mcycle
+2026-07-12 17:26:45,bucles,bitcount,93.699,1.167727,1.165714,-0.1724,39.49,517150016,0,0,0,0,5120004,133120001,0,936990023
+2026-07-12 17:27:10,bucles,bsearch,12.111,1.162899,1.163210,0.0268,39.49,60622612,0,0,0,0,6694406,11625412,0,121113466

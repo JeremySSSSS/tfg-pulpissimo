@@ -94,8 +94,16 @@ def run_one(elf):
     """Devuelve los 18 words (strings hex) de 'results' tras correr el elf."""
     out = ""
     for intento in range(1, RETRIES + 1):
-        out = subprocess.run([GDB_BIN, elf], input=GDB_SCRIPT, stdout=subprocess.PIPE,
-                             stderr=subprocess.STDOUT, text=True, timeout=GDB_TIMEOUT).stdout
+        try:
+            out = subprocess.run([GDB_BIN, elf], input=GDB_SCRIPT,
+                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                 text=True, timeout=GDB_TIMEOUT).stdout
+        except subprocess.TimeoutExpired as e:
+            out = e.stdout or ""
+            print(f"    (intento {intento}/{RETRIES}: timeout GDB "
+                  f"tras {GDB_TIMEOUT} s, reintento...)")
+            time.sleep(2)
+            continue
         if any(m in out for m in _BAD):
             print(f"    (intento {intento}/{RETRIES}: JTAG inestable, reintento...)")
             time.sleep(2)
@@ -107,6 +115,11 @@ def run_one(elf):
                 _, rest = line.split(":", 1)
                 words.extend(_WORD.findall(rest))
         if len(words) == 18:
+            vals = [int(x, 16) for x in words]
+            if vals[0] == 0xBAD00BAD:
+                raise RuntimeError(
+                    f"{elf}: trap en workload "
+                    f"(mcause=0x{vals[1]:08x}, mepc=0x{vals[2]:08x})")
             global ultima_temp_cC
             mt = _TEMP.search(out)
             ultima_temp_cC = _temp_cC_de(int(mt.group(1))) if mt else None
@@ -134,8 +147,15 @@ def run_medido(elf, get_pavg, reintentos=3):
         mc = mcycle_de(words)
         ni = ninstr_de(words)
         ipc = ni / mc if mc else 1e9
+        # duracion de PARED esperada de la ventana: mcycle es tiempo ACTIVO;
+        # en las variantes de intensidad la pared es activo/duty
+        esperado = mc / 1e7
+        if elf.endswith("_d60.elf"):
+            esperado /= 0.60
+        elif elf.endswith("_d30.elf"):
+            esperado /= 0.30
         try:
-            pmed = get_pavg()
+            pmed = get_pavg(esperado_s=esperado)
         except TimeoutError:
             print(f"    intento {intento}/{reintentos}: ventana sin P_avg del "
                   f"ESP32; REINTENTO la medida (nueva ventana)")

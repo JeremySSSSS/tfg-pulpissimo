@@ -73,14 +73,29 @@ class Inbox:
         self.hoja = hoja
         self.seen = n_filas(hoja)
 
-    def get_pavg(self, timeout=30):
+    def get_pavg(self, timeout=30, esperado_s=None):
+        """Espera la fila nueva del ESP32 y devuelve su p_avg. Si se conoce la
+        duracion esperada de la ventana (esperado_s), se verifica contra la
+        duration_ms de la fila: una fila con duracion incompatible es una
+        ventana VIEJA que llego tarde (p.ej. de un reintento) y se DESCARTA en
+        vez de aparearse con la corrida equivocada --- sin esta guarda, una
+        fila sobrante desalinea todas las corridas siguientes de la tanda."""
         t0 = time.time()
         avisado = False
         while time.time() - t0 < timeout:
             filas = leer(self.hoja)
             if len(filas) > self.seen:
                 self.seen = len(filas)
-                return fnum(filas[-1]["p_avg"])
+                fila = filas[-1]
+                if esperado_s is not None and fila.get("duration_ms"):
+                    dur = fnum(fila["duration_ms"]) / 1e3
+                    if abs(dur - esperado_s) > max(2.0, 0.15 * esperado_s):
+                        print(f"    [GUARDA] fila del ESP32 con duracion "
+                              f"{dur:.1f} s (esperaba {esperado_s:.1f} s): "
+                              f"ventana vieja desalineada, la descarto y sigo "
+                              f"esperando la correcta")
+                        continue
+                return fnum(fila["p_avg"])
             if not avisado:   # un solo aviso, no uno cada 3 s
                 print(f"    esperando la ventana del ESP32 (max {timeout} s)...")
                 avisado = True

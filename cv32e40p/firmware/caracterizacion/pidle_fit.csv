@@ -1,5 +1,5 @@
-"# Ajuste P_idle(T)=a+b*T del barrido 2026-07-07 18:24. spread=3.8C, R2=0.9750, n=60."
+"# Ajuste P_idle(T)=a+b*T del barrido 2026-07-12 18:41. spread=15.8C, R2=0.9561, n=97."
 parametro,valor,unidad
-a,1.068261,W
-b_W_per_C,1.98816419e-03,W/C
-r2,0.9750,
+a,1.033583,W
+b_W_per_C,2.91379260e-03,W/C
+r2,0.9561,

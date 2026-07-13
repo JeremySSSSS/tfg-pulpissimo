@@ -18,7 +18,7 @@ OUT   := ../elf
 #   trialdiv  div (3.o)              fpoly      float ALTO (3.o)
 #   vecscale  float / mem            histogram  mem ALTO disperso
 #   sort      mem+ctrl+alu (balance)
-BENCH := memcpy fsm crc matmul mulhash64 mulhscale dotprod gcd modpow trialdiv radix fpoly vecscale histogram sort
+BENCH := memcpy fsm crc matmul mulhash64 mulhscale mulhchain dotprod gcd modpow trialdiv radix fpoly saxpy vecscale histogram sort
 ELFS  := $(addprefix $(OUT)/,$(addsuffix .elf,$(BENCH)))
 
 FLAGS  := -nostdlib -nostartfiles -static -Os -g -mabi=ilp32 \
@@ -64,6 +64,9 @@ $(OUT)/mulhscale.elf: harness.S wl_mulhscale.c platform.inc link.ld
 	$(CC) $(KFLAGS) -march=rv32imc  -DREPS=120000  -o $@ harness.S wl_mulhscale.c
 $(OUT)/radix.elf:     harness.S wl_radix.c     platform.inc link.ld
 	$(CC) $(KFLAGS) -march=rv32imc  -DREPS=30000   -o $@ harness.S wl_radix.c
+# refuerzo mulh (ver wl_mulhchain.c): mulh denso ~40%, sin mul, C compilado
+$(OUT)/mulhchain.elf: harness.S wl_mulhchain.c platform.inc link.ld
+	$(CC) $(KFLAGS) -march=rv32imc  -DREPS=2300000 -o $@ harness.S wl_mulhchain.c
 
 # con float -> rv32imfc + -ffp-contract=off (sin fmadd; ops INDEPENDIENTES)
 $(OUT)/dotprod.elf:   harness.S wl_dotprod.c   platform.inc link.ld
@@ -72,6 +75,9 @@ $(OUT)/vecscale.elf:  harness.S wl_vecscale.c  platform.inc link.ld
 	$(CC) $(KFLAGS) -march=rv32imfc -ffp-contract=off -DREPS=300000 -o $@ harness.S wl_vecscale.c
 $(OUT)/fpoly.elf:     harness.S wl_fpoly.c     platform.inc link.ld
 	$(CC) $(KFLAGS) -march=rv32imfc -ffp-contract=off -DREPS=200000 -o $@ harness.S wl_fpoly.c
+# refuerzo float+mem (ver wl_saxpy.c): region fpgain-like del espacio
+$(OUT)/saxpy.elf:     harness.S wl_saxpy.c     platform.inc link.ld
+	$(CC) $(KFLAGS) -march=rv32imfc -ffp-contract=off -DREPS=85000  -o $@ harness.S wl_saxpy.c
 
 clean:
 	rm -f $(ELFS)

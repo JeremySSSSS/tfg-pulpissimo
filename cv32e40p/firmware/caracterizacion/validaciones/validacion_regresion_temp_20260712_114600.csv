@@ -1,0 +1,3 @@
+fecha,metodo,programa,T_s,P_med_W,P_pred_W,err_pct,temp_C,n_alu,n_mul,n_mulh,n_div,c_div,n_mem,n_ctrl,n_float,mcycle
+2026-07-12 11:47:55,regresion,bitcount,93.699,1.176253,1.175865,-0.0330,41.33,517150016,0,0,0,0,5120004,133120001,0,936990023
+2026-07-12 11:48:20,regresion,bsearch,12.111,1.171733,1.172532,0.0682,41.70,60622612,0,0,0,0,6694406,11625412,0,121113466

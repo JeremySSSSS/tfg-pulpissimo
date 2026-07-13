@@ -1,0 +1,2 @@
+fecha,metodo,programa,T_s,P_med_W,P_pred_W,err_pct,temp_C,n_alu,n_mul,n_mulh,n_div,c_div,n_mem,n_ctrl,n_float,mcycle
+2026-07-12 16:38:45,bucles,fpmem,12.315,1.164685,1.165548,0.0741,40.60,30990014,0,0,0,0,23040004,7680001,15360000,123150021

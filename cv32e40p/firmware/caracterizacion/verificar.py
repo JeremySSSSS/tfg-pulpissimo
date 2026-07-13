@@ -63,6 +63,9 @@ def main():
                          "(correccion por pendiente termica de barrido forzado) se "
                          "retiro: la pendiente in-situ no coincide con la del "
                          "barrido y sobre-corregia")
+    ap.add_argument("--repeats", type=int, default=1,
+                    help="corridas por carga; P_med = promedio de las N "
+                         "ventanas (baja el ruido del banco ~sqrt(N))")
     ap.add_argument("programas", nargs="+")
     args = ap.parse_args()
 
@@ -134,6 +137,18 @@ def main():
         elf = find_elf(prog)
         print(f"==> corriendo {prog} por JTAG...")
         words, pbar = jtag.run_medido(elf, inbox.get_pavg)
+        if args.repeats > 1:
+            # la ejecucion es determinista (mismos contadores); solo la
+            # POTENCIA se promedia entre repeticiones
+            pes = [pbar]
+            for rep in range(2, args.repeats + 1):
+                _, p2 = jtag.run_medido(elf, inbox.get_pavg)
+                pes.append(p2)
+                print(f"    rep {rep}/{args.repeats}: P = {p2:.4f} W")
+            pbar = sum(pes) / len(pes)
+            disp = (max(pes) - min(pes)) * 1e3
+            print(f"    promedio {args.repeats} reps: {pbar:.4f} W "
+                  f"(rango {disp:.2f} mW)")
         w = [modelo.to_int(x) for x in words]
         T = ((w[17] - w[16]) & modelo.MASK32) / modelo.F_CLK
         P_din = modelo.potencia_dinamica(w, coef)   # el modelo (dinamica)
