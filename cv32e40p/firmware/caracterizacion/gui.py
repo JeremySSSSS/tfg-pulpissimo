@@ -126,8 +126,8 @@ def cmd_de(req):
         met = req.get("metodo")
         if met not in ("bucles", "regresion"):
             raise ValueError("metodo invalido")
-        pidle = req.get("pidle", "temp")
-        if pidle not in ("temp", "medir", "archivo"):
+        pidle = req.get("pidle", "medir")
+        if pidle not in ("medir", "archivo"):
             raise ValueError("pidle invalido")
         progs = [p for p in req.get("progs", []) if p in benchmarks()]
         if not progs:
@@ -234,8 +234,8 @@ def pagina():
 <div class="card"><h2>Verificar (benchmarks)</h2>
  <div class="fila">metodo <select id="vmet"><option value="regresion">M2 regresion</option>
   <option value="bucles">M1 bucles</option></select>
-  linea base <select id="vpidle"><option value="temp" selected>temp (corregida)</option>
-  <option value="medir">medir ahora</option><option value="archivo">archivo</option></select></div>
+  linea base <select id="vpidle"><option value="medir" selected>medir ahora</option>
+  <option value="archivo">archivo (caracterizacion)</option></select></div>
  <div>{chk(bm, "vprog")}</div>
  <div class="fila"><button onclick="verificar()">Verificar</button>
   <button onclick="marcar('vprog',true)" style="background:#3a4a5c">todos</button>
