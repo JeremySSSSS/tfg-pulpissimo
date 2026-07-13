@@ -54,10 +54,15 @@ def find_elf(prog):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--metodo", required=True, help="bucles|regresion (o 1|2)")
-    ap.add_argument("--pidle", default="temp",
-                    help="linea base: 'temp' (P_idle del archivo corregido por la "
-                         "temperatura del die de CADA corrida, default), 'medir' "
-                         "(mide idle_check ahora), 'archivo' (tal cual) o un numero en W")
+    ap.add_argument("--pidle", default="archivo",
+                    help="linea base de la sesion: 'archivo' (usa la P_idle "
+                         "guardada con los coeficientes, default), 'medir' (mide "
+                         "idle_check AHORA en sitio: la estatica depende de la "
+                         "temperatura y del instrumento, no siempre es la de la "
+                         "caracterizacion) o un numero en W. El viejo modo 'temp' "
+                         "(correccion por pendiente termica de barrido forzado) se "
+                         "retiro: la pendiente in-situ no coincide con la del "
+                         "barrido y sobre-corregia")
     ap.add_argument("programas", nargs="+")
     args = ap.parse_args()
 
@@ -94,29 +99,14 @@ def main():
 
     inbox = sheet.Inbox()
 
-    # Linea base de ESTA sesion de validacion. El P_idle del coeficientes.csv
-    # envejece (deriva termica + instrumento, ~mW en horas): si la validacion no
-    # es inmediata a la caracterizacion, sesga TODAS las predicciones parejo.
-    # La linea base pertenece a la sesion (protocolo paso 3) -> se mide aqui.
-    # correccion por temperatura (modo 'temp'): P_idle del archivo se ajusta con
-    # la pendiente del barrido y la temperatura del die de CADA corrida:
-    #   P_base(run) = P_idle_ref + b*(T_run - T_ref)
-    # Cubre la parte TERMICA de la deriva sin volver a medir idle; la parte de
-    # instrumento (~mW en horas) queda como error aceptado (<0.5%, documentado).
-    b_temp = None
-    T_ref = modelo.ultimo_T_idle
-    if args.pidle == "temp":
-        b_temp = modelo.cargar_pendiente_termica(os.path.join(HERE, "pidle_fit.csv"))
-        if b_temp is None or T_ref is None:
-            falta = "pidle_fit.csv (corre el barrido)" if b_temp is None \
-                    else "T_idle en coeficientes.csv (recaracteriza)"
-            print(f"  [AVISO] sin correccion por temperatura (falta {falta}); "
-                  f"uso P_idle del archivo tal cual = {P_idle:.4f} W\n")
-            b_temp = None
-        else:
-            print(f"  P_idle(T) = {P_idle:.4f} W @ {T_ref:.2f} C  "
-                  f"+  {b_temp*1e3:.2f} mW/C * (T_corrida - {T_ref:.2f} C)\n")
-    elif args.pidle == "medir":
+    # Linea base de ESTA sesion de validacion. La potencia estatica NO es
+    # reproducible entre sesiones: depende de la temperatura del die (la fuga
+    # crece con ella) y de la deriva lenta del instrumento, varios mW en horas.
+    # Por eso NO se reusa la P_idle con la que se hallaron los coeficientes; se
+    # MIDE en sitio al empezar la validacion (protocolo paso 3). Los
+    # coeficientes son deltas y siguen validos: lo que cambia es solo la base.
+    P_idle_archivo = P_idle
+    if args.pidle == "medir":
         build_idle_check()
         print("  midiendo P_idle de la sesion (idle_check, ~5 s)...")
         for intento in range(1, 4):
@@ -128,17 +118,13 @@ def main():
                 if intento == 3:
                     raise
                 print(f"    idle: ventana sin P_avg; REINTENTO ({intento}/3)")
-        drift = 1e3 * (P_ses - P_idle)
-        print(f"  P_idle sesion = {P_ses:.4f} W  (archivo: {P_idle:.4f} W, "
-              f"deriva {drift:+.2f} mW)")
-        if abs(drift) > 2.0:
-            print(f"  [ALERTA] la linea base derivo {drift:+.1f} mW desde la "
-                  f"caracterizacion (termico + instrumento). Re-anclada "
-                  f"automaticamente; los coeficientes siguen validos (son deltas).")
-        print()
+        drift = 1e3 * (P_ses - P_idle_archivo)
+        print(f"  P_idle sesion = {P_ses:.4f} W  (caracterizacion: "
+              f"{P_idle_archivo:.4f} W, deriva {drift:+.2f} mW)\n")
         P_idle = P_ses
     elif args.pidle == "archivo":
-        print(f"  P_idle = {P_idle:.4f} W (del coeficientes.csv)\n")
+        print(f"  P_idle = {P_idle:.4f} W (la de la caracterizacion, sin "
+              f"re-medir)\n")
     else:
         P_idle = float(args.pidle)
         print(f"  P_idle = {P_idle:.4f} W (fijado por linea de comandos)\n")
@@ -154,10 +140,9 @@ def main():
         cont = modelo.contadores(w)
         tC = jtag.ultima_temp_cC                      # temperatura del die (XADC)
         tstr = f"{tC/100:.2f}" if tC is not None else ""
-        # base a la temperatura de ESTA corrida (0 si no hay pendiente/lectura)
-        T_run = tC / 100 if tC is not None else None
-        P_base = P_idle + modelo.correccion_termica(T_run, T_ref, b_temp)
-        P_pred = P_base + P_din
+        # base fija de la sesion (medida en sitio); la temperatura se registra
+        # como evidencia de la condicion, ya no entra en la prediccion
+        P_pred = P_idle + P_din
         err = 100 * (P_pred - pbar) / pbar
         errs.append(abs(err))
         ts = time.strftime("%Y-%m-%d %H:%M:%S")
