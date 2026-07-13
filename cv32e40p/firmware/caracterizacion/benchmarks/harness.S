@@ -48,6 +48,16 @@ finished:
     j finished
 
 trap_handler:
+    li t0, GPIO_CLEAR0
+    li t1, GPIO08_BIT
+    sw t1, 0(t0)
+    la t2, results
+    li t3, 0xBAD00BAD
+    sw t3, 0(t2)
+    csrr t3, mcause
+    sw t3, 4(t2)
+    csrr t3, mepc
+    sw t3, 8(t2)
     ebreak
     j trap_handler
 

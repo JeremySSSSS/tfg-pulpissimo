@@ -1,14 +1,26 @@
-/* FLOAT + CTRL: FP independiente (set probado fadd/fmul/fsub/fmax, operandos
- * ft0/ft1 fijos) con saltos DATA-DEPENDENT decididos por un xorshift entero
- * (impredecibles -> mezcla taken/not-taken). Valida e_float con e_ctrl. */
+/* FLOAT + CTRL seguro: operaciones FP independientes sobre vectores y ramas
+ * dependientes de un xorshift entero en cada elemento.
+ */
 #ifndef REPS
-#define REPS 2500000
+#define REPS 20000
 #endif
+#define N 256
 
 .section .data
 .align 4
-float_words:
-    .word 0x3f800000, 0x40000000
+va:
+    .rept N
+    .word 0x3f800000
+    .endr
+vb:
+    .rept N
+    .word 0x40000000
+    .endr
+
+.section .bss
+.align 4
+vout:
+    .space N*4
 
 .section .text
 .globl run_workload
@@ -19,34 +31,41 @@ run_workload:
 
     li t0, 0x6000
     csrs mstatus, t0
-    la t0, float_words
-    flw ft0, 0(t0)
-    flw ft1, 4(t0)
+    li t5, 0x2545F491
 
-    li t0, 0x2545F491       /* semilla xorshift */
     li s0, REPS
 1:
-    /* xorshift32: t0 = t0 ^ (t0<<13) ^ (t0>>17) ^ (t0<<5) */
-    slli t1, t0, 13
-    xor  t0, t0, t1
-    srli t1, t0, 17
-    xor  t0, t0, t1
-    slli t1, t0, 5
-    xor  t0, t0, t1
-
-    andi t2, t0, 1
-    beqz t2, 2f
-    fadd.s ft2, ft0, ft1
-    fmul.s ft3, ft0, ft1
-    j 3f
+    la t1, va
+    la t2, vb
+    la t3, vout
+    li t4, N
 2:
-    fsub.s ft4, ft1, ft0
-    fmax.s ft5, ft0, ft1
+    slli t6, t5, 13
+    xor  t5, t5, t6
+    srli t6, t5, 17
+    xor  t5, t5, t6
+    slli t6, t5, 5
+    xor  t5, t5, t6
+
+    flw ft2, 0(t1)
+    flw ft3, 0(t2)
+    andi a0, t5, 1
+    beqz a0, 3f
+    fadd.s ft4, ft2, ft3
+    j 4f
 3:
-    andi t2, t0, 2
-    beqz t2, 4f
-    fmul.s ft6, ft1, ft1
+    fmul.s ft4, ft2, ft3
 4:
+    fsw ft4, 0(t3)
+    andi a0, t5, 2
+    beqz a0, 5f
+    xor  a1, a1, t5
+5:
+    addi t1, t1, 4
+    addi t2, t2, 4
+    addi t3, t3, 4
+    addi t4, t4, -1
+    bnez t4, 2b
     addi s0, s0, -1
     bnez s0, 1b
 

@@ -1,42 +1,70 @@
-	.file	"wl_logistic.c"
-	.option nopic
-	.text
-	.align	1
-	.globl	run_workload
-	.type	run_workload, @function
+/* Logistic seguro para validacion HW: el estado pseudoaleatorio se mantiene en
+ * entero y selecciona operaciones FP independientes sobre operandos frescos.
+ */
+#ifndef REPS
+#define REPS 20000
+#endif
+#define N 256
+
+.section .data
+.align 4
+va:
+    .rept N
+    .word 0x3f000000
+    .endr
+vb:
+    .rept N
+    .word 0x4079999a
+    .endr
+
+.section .bss
+.align 4
+vout:
+    .space N*4
+
+.section .text
+.globl run_workload
+.type run_workload, @function
 run_workload:
-	lui	a4,%hi(.LC0)
-	flw	fa5,%lo(.LC0)(a4)
-	lui	a4,%hi(.LC1)
-	flw	fa2,%lo(.LC1)(a4)
-	lui	a4,%hi(.LC2)
-	flw	fa3,%lo(.LC2)(a4)
-	li	a5,7999488
-	add	sp,sp,-16
-	add	a5,a5,512
-.L2:
-	fmul.s	fa4,fa5,fa2
-	fsub.s	fa5,fa3,fa5
-	add	a5,a5,-1
-	fmul.s	fa5,fa4,fa5
-	bnez	a5,.L2
-	lui	a5,%hi(.LC3)
-	flw	fa4,%lo(.LC3)(a5)
-	fmul.s	fa5,fa5,fa4
-	fcvt.w.s a5,fa5,rtz
-	sw	a5,12(sp)
-	lw	a5,12(sp)
-	add	sp,sp,16
-	jr	ra
-	.size	run_workload, .-run_workload
-	.section	.srodata.cst4,"aM",@progbits,4
-	.align	2
-.LC0:
-	.word	1056964608
-.LC1:
-	.word	1081711002
-.LC2:
-	.word	1065353216
-.LC3:
-	.word	1148846080
-	.ident	"GCC: (GNU) 7.1.1 20170509"
+    .option push
+    .option norvc
+
+    li t0, 0x6000
+    csrs mstatus, t0
+    li t5, 0x2545F491
+
+    li s0, REPS
+1:
+    la t1, va
+    la t2, vb
+    la t3, vout
+    li t4, N
+2:
+    slli t6, t5, 13
+    xor  t5, t5, t6
+    srli t6, t5, 17
+    xor  t5, t5, t6
+    slli t6, t5, 5
+    xor  t5, t5, t6
+
+    flw ft2, 0(t1)
+    flw ft3, 0(t2)
+    andi a0, t5, 1
+    beqz a0, 3f
+    fmul.s ft4, ft2, ft3
+    j 4f
+3:
+    fadd.s ft4, ft2, ft3
+4:
+    fsw ft4, 0(t3)
+    addi t1, t1, 4
+    addi t2, t2, 4
+    addi t3, t3, 4
+    addi t4, t4, -1
+    bnez t4, 2b
+    addi s0, s0, -1
+    bnez s0, 1b
+
+    .option pop
+    ret
+.size run_workload, .-run_workload

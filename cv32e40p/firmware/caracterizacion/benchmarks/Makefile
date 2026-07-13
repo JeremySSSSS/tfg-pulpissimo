@@ -6,8 +6,8 @@ RISCV ?= /home/jjsotoch/pulp/toolchain/v1.0.16-pulp-riscv-gcc-ubuntu-18
 CROSS := $(RISCV)/bin/riscv32-unknown-elf-
 CC    := $(CROSS)gcc
 
-BENCH_INT := sha256 primes conv md5 floyd bitcount fixmul bsearch
-BENCH_FP  := fpgain fpalu fpmem fpctrl ycbcr logistic
+BENCH_INT := sha256 primes conv floyd bitcount fixmul bsearch wmul divsum mixed
+BENCH_FP  := fpgain fpalu fpmem ycbcr
 ELFS := $(addsuffix .elf,$(BENCH_INT) $(BENCH_FP))
 
 FLAGS  := -nostdlib -nostartfiles -static -Os -g -mabi=ilp32 \
