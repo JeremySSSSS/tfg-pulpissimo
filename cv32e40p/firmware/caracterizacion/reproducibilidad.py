@@ -114,7 +114,14 @@ def m1():
         idle = [float(r["P_med_W"]) for r in g if r["categoria"] == "idle"]
         if not idle:
             continue
-        Pi = np.mean(idle)
+        # Rechazo de transitorio de arranque: una sesion que inicia en frio
+        # da una primera ventana de reposo anomala (la mas fria pero la de
+        # mayor potencia, contra la tendencia termica), previa al equilibrio
+        # del protocolo. Se descartan ventanas > 2 mW sobre la mediana antes
+        # de promediar; sin outlier, esto es la media de siempre.
+        med = float(np.median(idle))
+        idle = [p for p in idle if p - med <= 2e-3] or idle
+        Pi = float(np.mean(idle))
         coefs = {"_fecha": g[0]["fecha"][:16]}
         for c in CATS:
             rs = [r for r in g if r["categoria"] == c and r["fecha"] >= M1_DESDE[c]]
