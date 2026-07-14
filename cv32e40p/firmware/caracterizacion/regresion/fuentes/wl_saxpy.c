@@ -1,4 +1,9 @@
-/* SAXPY: C[i] = A[i]*s + B[i] sobre arreglos float: FLOAT (~20%) + MEM (~28%,
+/* SAXPY [RETIRADO de la calibracion]: NO TERMINA en este bitstream ni con
+ * el patron de vecscale --- la FPU de este bitstream no tolera este kernel
+ * (modo de falla conocido, ver 6.1 del documento). Se conserva por si se
+ * retoma con un bitstream con FPU sana.
+ *
+ * Original: C[i] = A[i]*s + B[i] sobre arreglos float: FLOAT (~20%) + MEM (~28%,
  * 2 cargas + 2 escrituras por elemento). Razon de ser: cubre la region
  * float+mem densa del espacio de composicion --- el perfil de las cargas de
  * validacion flotantes (fpgain: 23% float + 38% mem) --- que fpoly (float

@@ -18,7 +18,7 @@ OUT   := ../elf
 #   trialdiv  div (3.o)              fpoly      float ALTO (3.o)
 #   vecscale  float / mem            histogram  mem ALTO disperso
 #   sort      mem+ctrl+alu (balance)
-BENCH := memcpy fsm crc matmul mulhash64 mulhscale mulhchain dotprod gcd modpow trialdiv radix fpoly saxpy vecscale histogram sort
+BENCH := memcpy fsm crc matmul mulhash64 mulhscale mulhchain dotprod gcd modpow trialdiv radix fpoly vecscale histogram sort
 ELFS  := $(addprefix $(OUT)/,$(addsuffix .elf,$(BENCH)))
 
 FLAGS  := -nostdlib -nostartfiles -static -Os -g -mabi=ilp32 \
@@ -75,7 +75,9 @@ $(OUT)/vecscale.elf:  harness.S wl_vecscale.c  platform.inc link.ld
 	$(CC) $(KFLAGS) -march=rv32imfc -ffp-contract=off -DREPS=300000 -o $@ harness.S wl_vecscale.c
 $(OUT)/fpoly.elf:     harness.S wl_fpoly.c     platform.inc link.ld
 	$(CC) $(KFLAGS) -march=rv32imfc -ffp-contract=off -DREPS=200000 -o $@ harness.S wl_fpoly.c
-# refuerzo float+mem (ver wl_saxpy.c): region fpgain-like del espacio
+# refuerzo float+mem RETIRADO: wl_saxpy.c no termina en este bitstream
+# (modo de falla de la FPU) ni siquiera con el patron de vecscale; queda la
+# regla por si se retoma con otro bitstream
 $(OUT)/saxpy.elf:     harness.S wl_saxpy.c     platform.inc link.ld
 	$(CC) $(KFLAGS) -march=rv32imfc -ffp-contract=off -DREPS=230000 -o $@ harness.S wl_saxpy.c
 
