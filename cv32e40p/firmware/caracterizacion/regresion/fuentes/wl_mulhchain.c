@@ -1,4 +1,9 @@
-/* MULHCHAIN: cadena de productos ALTOS, mulh DENSO (~25%, 8 productos por vuelta sin derrames a pila) y SIN mul: solo se
+/* MULHCHAIN [RETIRADO tras experimento del 13-jul-2026]: hizo su trabajo
+ * (mulh 10.4->3.9 nJ, anclado) pero su ALU de mezcla tipo hash conmuta mas
+ * que el alu compilado tipico y contamino la atribucion (alu +20%, mem -28%);
+ * la validacion global quedo igual (0.20 vs 0.22%) con el error trasladado a
+ * las cargas de alu. Segunda confirmacion de la dependencia del contexto
+ * intra-categoria (la primera: los pares). Kernel original: cadena de productos ALTOS, mulh DENSO (~25%, 8 productos por vuelta sin derrames a pila) y SIN mul: solo se
  * usa la palabra alta ((int64)a*b)>>32, asi que GCC emite mulh/mulhu sin mul.
  * Razon de ser: en el resto del set mulh nunca pasa del 9% de las
  * instrucciones (mulhash64 9.0, mulhscale 7.5, dotprod 2.3) -> la regresion

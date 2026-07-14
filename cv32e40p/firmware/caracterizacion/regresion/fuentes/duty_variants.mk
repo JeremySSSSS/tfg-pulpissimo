@@ -93,3 +93,4 @@ $(OUT)/vecscale_d60.elf: harness.S wl_vecscale.c platform.inc link.ld
 
 $(OUT)/vecscale_d30.elf: harness.S wl_vecscale.c platform.inc link.ld
 	$(CC) $(KFLAGS) -march=rv32imfc -ffp-contract=off -DREPS=3886 -DCHUNKS=10 -DSLEEP_TICKS=13999963 -o $@ harness.S wl_vecscale.c
+

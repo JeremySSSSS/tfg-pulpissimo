@@ -257,8 +257,8 @@ DYN = ["alu", "mul", "mulh", "div", "mem", "ctrl", "float"]
 REGR = {"alu": "n_alu", "mul": "n_mul", "mulh": "n_mulh", "div": "c_div",
         "mem": "n_mem", "ctrl": "n_ctrl", "float": "n_float"}
 DEFAULT_PROGS = ["memcpy", "fsm", "crc", "matmul", "mulhash64", "mulhscale",
-                 "mulhchain", "dotprod", "gcd", "modpow", "trialdiv", "radix",
-                 "fpoly", "vecscale", "histogram", "sort"]
+                 "dotprod", "gcd", "modpow", "trialdiv", "radix", "fpoly",
+                 "vecscale", "histogram", "sort"]
 
 
 def cargar_pidle(fuente):

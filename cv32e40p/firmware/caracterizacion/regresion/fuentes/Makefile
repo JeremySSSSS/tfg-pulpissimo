@@ -18,7 +18,7 @@ OUT   := ../elf
 #   trialdiv  div (3.o)              fpoly      float ALTO (3.o)
 #   vecscale  float / mem            histogram  mem ALTO disperso
 #   sort      mem+ctrl+alu (balance)
-BENCH := memcpy fsm crc matmul mulhash64 mulhscale mulhchain dotprod gcd modpow trialdiv radix fpoly vecscale histogram sort
+BENCH := memcpy fsm crc matmul mulhash64 mulhscale dotprod gcd modpow trialdiv radix fpoly vecscale histogram sort
 ELFS  := $(addprefix $(OUT)/,$(addsuffix .elf,$(BENCH)))
 
 FLAGS  := -nostdlib -nostartfiles -static -Os -g -mabi=ilp32 \
@@ -64,7 +64,9 @@ $(OUT)/mulhscale.elf: harness.S wl_mulhscale.c platform.inc link.ld
 	$(CC) $(KFLAGS) -march=rv32imc  -DREPS=120000  -o $@ harness.S wl_mulhscale.c
 $(OUT)/radix.elf:     harness.S wl_radix.c     platform.inc link.ld
 	$(CC) $(KFLAGS) -march=rv32imc  -DREPS=30000   -o $@ harness.S wl_radix.c
-# refuerzo mulh (ver wl_mulhchain.c): mulh denso ~40%, sin mul, C compilado
+# refuerzo mulh RETIRADO tras el experimento del 13-jul: fija mulh (10.4->3.9,
+# estable) pero su alu denso contamina la atribucion (alu +20%, mem -28%) y la
+# validacion global no mejora (0.20 vs 0.22%). Ver wl_mulhchain.c
 $(OUT)/mulhchain.elf: harness.S wl_mulhchain.c platform.inc link.ld
 	$(CC) $(KFLAGS) -march=rv32imc  -DREPS=2300000 -o $@ harness.S wl_mulhchain.c
 
