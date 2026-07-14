@@ -28,8 +28,9 @@ import modelo  # noqa: E402
 
 PORT = 8237
 CATS = ["alu", "mul", "mulh", "div", "mem", "ctrl", "float"]
-PROGS_M2 = ["memcpy", "fsm", "crc", "matmul", "mulhash64", "mulhscale", "dotprod",
-            "gcd", "modpow", "trialdiv", "radix", "fpoly", "vecscale", "histogram", "sort"]
+PROGS_M2 = ["memcpy", "fsm", "crc", "matmul", "mulhash64", "mulhscale",
+            "mulhchain", "dotprod", "gcd", "modpow", "trialdiv", "radix",
+            "fpoly", "vecscale", "histogram", "sort"]
 
 
 def benchmarks():
@@ -224,10 +225,10 @@ def pagina():
  <div class="fila">modelo: <b>efimon</b> (barrido de intensidad, el oficial)
   &nbsp; campanas <input type="number" id="m2n" value="1" min="1" max="10" style="width:52px">
   <label class="chip"><input type="checkbox" id="m2nb">no recompilar</label></div>
- <details><summary style="font-size:12px;cursor:pointer;color:#9fb0c0">programas (15)</summary>
+ <details><summary style="font-size:12px;cursor:pointer;color:#9fb0c0">programas (16)</summary>
   <div>{chk(PROGS_M2, "m2prog")}</div></details>
  <div class="fila"><button onclick="m2()">Caracterizar M2</button></div>
- <div class="nota">efimon: 15 programas &times; 3 intensidades + idle &asymp; 30 min por campana.
+ <div class="nota">efimon: 16 programas &times; 3 intensidades + idle &asymp; 30 min por campana.
   Con campanas &gt; 1 se corren en secuencia; cada campana guarda su juego de
   coeficientes en regresion/campanas/</div></div>
 
