@@ -2,8 +2,8 @@
 
 Las 14 cargas con las que se valida la estimación (`../verificar.py`). Ninguna se
 usa para calibrar: son el conjunto reservado que decide si los coeficientes
-generalizan. Cubren algoritmos reales (`sha256`, `md5`→retirada, `floyd`,
-`bsearch`, `primes`, `conv`, `ycbcr`, `bitcount`, `fixmul`) y cargas de estrés
+generalizan. Cubren algoritmos reales (`sha256`, `floyd`, `bsearch`, `primes`,
+`conv`, `ycbcr`, `bitcount`, `fixmul`) y cargas de estrés
 dirigidas a las categorías con poco soporte natural:
 
 - `wl_wmul.S` — densa en `mulh` (≈58 % del retiro). Fue la carga que expuso la

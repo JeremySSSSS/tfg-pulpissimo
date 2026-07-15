@@ -30,8 +30,8 @@ cálculo vía Apps Script. Dos métodos independientes producen los coeficientes
   y ajuste por mínimos cuadrados no negativos con intercepto (estilo EfiMon).
 
 **Resultado:** validando contra 14 cargas no vistas durante la calibración, el error
-relativo medio absoluto es **0,15 % (M1)** y **0,22 % (M2)**, con máximos < 0,7 % —
-muy por debajo de la meta de 10 % de la hipótesis.
+relativo medio absoluto es **0,15 % (M1)** y **0,22 % (M2)**, con máximos menores a
+0,7 %, muy por debajo de la meta de 10 % de la hipótesis.
 
 ## Estructura
 
@@ -48,8 +48,9 @@ muy por debajo de la meta de 10 % de la hipótesis.
 
 1. Bitstream: `pulpissimo/bitstream/xilinx_pulpissimo_xadc.bit` (o regenerar con
    `pulpissimo/target/fpga/pulpissimo-nexys/run_batch.tcl`).
-2. Configurar credenciales locales: ver `cv32e40p/firmware/caracterizacion/comun/README.md`
-   y `esp32_ina228/README.md` (plantillas `.example`, no versionadas las reales).
+2. Configurar credenciales locales: ver los README de
+   `cv32e40p/firmware/caracterizacion/comun/` y `.../esp32_ina228/`
+   (plantillas `.example`; las reales no se versionan).
 3. Correr el banco: `python3 cv32e40p/firmware/caracterizacion/gui.py` y abrir
    `http://localhost:8237`, o usar los scripts por consola (`caracterizar.py`,
    `verificar.py`).

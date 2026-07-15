@@ -19,4 +19,5 @@ de idle de cada campaña anclan el intercepto (potencia estática).
 - `coeficientes.csv` — coeficientes oficiales del método.
 - `campanas/` — respaldo por campaña para reproducibilidad.
 
-Se corre con `python3 ../caracterizar.py --metodo regresion` o desde la GUI.
+Se corre con `python3 ../caracterizar.py regresion --modelo efimon` o desde la GUI
+(que ya pasa el modelo oficial; el default de la CLI es `clasico`).

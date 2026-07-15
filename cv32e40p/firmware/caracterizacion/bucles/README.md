@@ -13,4 +13,4 @@ se despeja directamente de la potencia medida, sin regresión.
 - `campanas/` — respaldo de los coeficientes de cada campaña individual
   (`coeficientes_<timestamp>.csv`), para el análisis de reproducibilidad.
 
-Se corre con `python3 ../caracterizar.py --metodo bucles` o desde la GUI.
+Se corre con `python3 ../caracterizar.py bucles` o desde la GUI.
