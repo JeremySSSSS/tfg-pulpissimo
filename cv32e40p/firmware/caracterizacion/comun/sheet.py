@@ -15,8 +15,9 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-# URL del Web App (/exec). Actualizar tras redeployar el Apps Script.
-SCRIPT_URL = "https://script.google.com/macros/s/REDACTED/exec"
+# URL del Web App (/exec): vive en config_local.py (no versionado; ver
+# config_local.py.example). Actualizar alli tras redeployar el Apps Script.
+from config_local import SCRIPT_URL  # noqa: E402
 
 REINTENTOS = 4   # el Apps Script da 500 transitorios (cold start, crear pestaña)
 

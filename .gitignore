@@ -13,3 +13,7 @@ __pycache__/
 # locks de LibreOffice y logs sueltos de latex
 .~lock.*#
 texput.log
+
+# credenciales locales del banco (plantillas: *.example)
+cv32e40p/firmware/caracterizacion/esp32_ina228/secrets.h
+cv32e40p/firmware/caracterizacion/comun/config_local.py

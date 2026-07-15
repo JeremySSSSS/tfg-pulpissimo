@@ -1,0 +1,3 @@
+# Plantilla de configuracion local. Copiar como config_local.py (no
+# versionado) y poner la URL /exec del Web App de Apps Script del Sheet.
+SCRIPT_URL = "https://script.google.com/macros/s/TU_DEPLOY_ID/exec"

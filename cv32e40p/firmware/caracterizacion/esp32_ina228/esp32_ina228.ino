@@ -21,9 +21,9 @@
 #include <Adafruit_SSD1306.h>
 
 // --- Red / Sheet ---
-const char* WIFI_SSID  = "REDACTED";
-const char* WIFI_PASS  = "REDACTED";
-const char* SCRIPT_URL = "https://script.google.com/macros/s/REDACTED/exec";
+// Credenciales y URL del Web App en secrets.h (local, no versionado);
+// ver secrets.h.example para crear el suyo.
+#include "secrets.h"
 
 // Etiqueta opcional de la corrida (no la usa el host, solo diagnostico).
 #ifndef RUN_LABEL
