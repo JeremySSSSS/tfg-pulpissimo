@@ -41,8 +41,6 @@ muy por debajo de la meta de 10 % de la hipótesis.
 | `cv32e40p/rtl/cv32e40p_insn_classifier.sv` | El módulo clasificador (v2) |
 | `cv32e40p/firmware/caracterizacion/` | Banco de caracterización y validación completo |
 | `pulpissimo/` | Plataforma SoC con las modificaciones para la Nexys A7 (ver `pulpissimo/README_TFG.md`) |
-| `DISENO_CLASIFICADOR_V2.md` | Especificación del clasificador: categorías, cascada de prioridad, invariantes |
-| `CAMBIOS_TFG.md` / `AVANCES_REU.md` | Bitácora de cambios y avances |
 | `Anteproyecto/`, `Documento TFG/` | Documentos académicos (LaTeX) |
 | `Circuito de Potencia/` | PCB del sensado de corriente |
 
