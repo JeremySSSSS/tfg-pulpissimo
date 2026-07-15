@@ -1,8 +1,0 @@
-# CPI por categoria = T_ciclos / n_instr de los bucles dominados puros (../../metodo1/runs_m1.csv)
-categoria,T_ciclos,n_instr,CPI
-alu,2925000002,2891250013,1.0117
-mul,2925000002,2880000000,1.0156
-mulh,2985300002,595200000,5.0156
-mem,2961250003,1472000002,2.0117
-ctrl,2941200005,1464899999,2.0078
-float,2916000005,2304000000,1.2656

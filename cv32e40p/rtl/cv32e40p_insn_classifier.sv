@@ -1,5 +1,4 @@
 // Clasificador de instrucciones v2 — categorías por unidad activa.
-// Especificación: DISENO_CLASIFICADOR_V2.md (raíz del repositorio).
 //
 // 7 contadores de instrucciones retiradas + 1 contador de ciclos de
 // ocupación del divisor (DIV_CYC), expuestos como 16 CSR (0xBC0-0xBCF)

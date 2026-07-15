@@ -1,7 +1,0 @@
-# Artefactos de build y temporales (no versionar)
-*.elf
-*.dis
-__pycache__/
-*.pyc
-# Lock files de LibreOffice al abrir los CSV
-.~lock.*#

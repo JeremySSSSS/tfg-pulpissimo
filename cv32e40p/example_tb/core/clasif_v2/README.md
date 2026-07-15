@@ -1,7 +1,6 @@
 # Suite de verificación del clasificador v2
 
-Verificación auto-verificable del clasificador por unidad activa
-(`DISENO_CLASIFICADOR_V2.md`) con **modelo dorado**: el tracer del core
+Verificación auto-verificable del clasificador por unidad activa con **modelo dorado**: el tracer del core
 (`bhv/cv32e40p_tracer.sv`, define `CV32E40P_TRACE_EXECUTION`) registra cada
 instrucción retirada; `golden_clasif.py` clasifica ese trace en software con
 las reglas del esquema y compara contra los CSR que el test imprime.

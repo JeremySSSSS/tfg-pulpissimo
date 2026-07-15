@@ -284,7 +284,7 @@ package cv32e40p_pkg;
     CSR_PRIVLV = 12'hCC1,  // Custom CSR. Privilege Level
 
     // Instruction-category counters (clasificador v2: categorías por unidad
-    // activa, ver DISENO_CLASIFICADOR_V2.md). 8 contadores de 64 bits en
+    // activa, ver rtl/cv32e40p_insn_classifier.sv). 8 contadores de 64 bits en
     // pares LO/HI; DIVCYC acumula ciclos de ocupación del divisor.
     CSR_CAT_ALU_LO    = 12'hBC0,
     CSR_CAT_ALU_HI    = 12'hBC1,
