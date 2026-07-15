@@ -34,6 +34,7 @@
 static const int SDA_PIN  = 21;
 static const int SCL_PIN  = 22;
 static const int SYNC_PIN = 19;    // senal de ventana del FPGA (GPIO8 -> PMOD -> aqui)
+static const int LED_PIN  = 25;    // LED verde integrado (TTGO LoRa32 V2.1): ON = midiendo
 static const int LORA_CS_PIN    = 18;
 static const int LORA_RESET_PIN = 23;
 static const uint8_t OLED_ADDR = 0x3C;
@@ -188,7 +189,10 @@ void screenResult() {
 // ---------------------------------------------------------------------------
 // WiFi / Sheet
 // ---------------------------------------------------------------------------
+// BLOQUEANTE: solo se llama al subir una ventana (uploadWindow), nunca antes
+// de medir. En setup() el WiFi se arranca sin esperar (ver nota alli).
 void connectWifi() {
+  if (WiFi.status() == WL_CONNECTED) { wifiReady = true; return; }
   WiFi.mode(WIFI_STA); WiFi.begin(WIFI_SSID, WIFI_PASS);
   uint32_t t0 = millis();
   while (WiFi.status() != WL_CONNECTED && millis() - t0 < 20000) delay(300);
@@ -232,6 +236,7 @@ void setup() {
   pinMode(LORA_CS_PIN, OUTPUT);    digitalWrite(LORA_CS_PIN, HIGH);
   pinMode(LORA_RESET_PIN, OUTPUT); digitalWrite(LORA_RESET_PIN, LOW);
   pinMode(SYNC_PIN, INPUT);
+  pinMode(LED_PIN, OUTPUT);        digitalWrite(LED_PIN, LOW);
 
   Wire.begin(SDA_PIN, SCL_PIN);
   Wire.setClock(400000);
@@ -239,7 +244,13 @@ void setup() {
   oledOk = display.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR);
   if (oledOk) { header("BOOT"); line(0, "SDA21 SCL22"); line(1, "buscando INA..."); display.display(); }
 
-  connectWifi();
+  // WiFi en segundo plano, SIN esperar: esperar aqui (hasta 20 s) dejaba a la
+  // ESP32 ciega al GPIO durante el arranque, y la primera ventana tras un
+  // reset caia dentro de ese bloqueo y se perdia siempre (el host la repetia).
+  // La conexion recien se necesita al SUBIR la ventana, y uploadWindow()
+  // llama a connectWifi() si aun no esta lista.
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(WIFI_SSID, WIFI_PASS);
 
   Serial.println();
   Serial.println("Banco INA228 (ventana unica)");
@@ -263,6 +274,7 @@ void loop() {
   bool high = digitalRead(SYNC_PIN) == HIGH;
   float P = readPower();
   uint32_t now = millis();
+  wifiReady = (WiFi.status() == WL_CONNECTED);   // el begin() de setup conecta solo
 
   if (!high) sawLow = true;   // ya vimos un bajo -> el harness ya ejecuto gpio_init
 
@@ -272,6 +284,7 @@ void loop() {
     running = true;
     sumP = 0.0; cntP = 0;
     winStartMs = now;
+    digitalWrite(LED_PIN, HIGH);   // LED encendido mientras la ventana mide
   }
 
   if (high != prevHigh) { skip = SKIP_AFTER_EDGE; prevHigh = high; }
@@ -283,6 +296,7 @@ void loop() {
 
   // Cierra la ventana en el flanco ALTO->BAJO: promedia y publica.
   if (running && !high && cntP > 0) {
+    digitalWrite(LED_PIN, LOW);    // ventana cerrada
     double pavg = sumP / cntP;
     uint32_t dur = now - winStartMs;
     Serial.printf("VENTANA p_avg=%.6f W  n=%lu  dur=%lu ms\n",
