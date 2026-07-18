@@ -15,6 +15,19 @@ _start:
     la t0, trap_handler
     csrw mtvec, t0
 
+    /* Limpia .bss: los kernels de BEEBS asumen estaticas en cero (entorno C
+     * estandar), pero .bss es NOLOAD y el JTAG no lo reescribe al recargar.
+     * La SRAM solo nace en cero con el bitstream: sin esta limpieza, la
+     * SEGUNDA tanda hereda la basura del programa anterior (dijkstra se
+     * colgaba porque el indice de su pool de memoria arrancaba corrupto). */
+    la t0, __bss_start
+    la t1, __bss_end
+1:  bgeu t0, t1, 2f
+    sw zero, 0(t0)
+    addi t0, t0, 4
+    j 1b
+2:
+
     gpio_init
     csrci 0x320, 1            /* habilita mcycle */
 
