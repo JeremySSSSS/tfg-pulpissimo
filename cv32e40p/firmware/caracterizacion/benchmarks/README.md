@@ -13,6 +13,24 @@ dirigidas a las categorías con poco soporte natural:
 - `wl_fpalu.S`, `wl_fpmem.S`, `wl_fpgain.S` — cargas float (los patrones que la
   FPU del bitstream ejecuta de forma estable).
 
+## Cargas reales en C
+
+Además del conjunto oficial hay seis cargas escritas como programas C
+normales, algoritmos completos compilados por GCC sin ajustar la mezcla de
+instrucciones (pedidas para validar con código realista):
+
+- `wl_aes128.c` — cifrado AES-128 de un buffer de 1 KiB (tablas + XOR/shifts).
+- `wl_dijkstra.c` — caminos mínimos en un grafo de 32 nodos.
+- `wl_dct8x8.c` — DCT 8×8 entera en punto fijo Q15, estilo JPEG (mul/mulh
+  reales por los productos de 64 bits).
+- `wl_rle.c` — compresión RLE con verificación de ida y vuelta.
+- `wl_sieve.c` — criba de Eratóstenes hasta 8192 con mapa de bits.
+- `wl_qsort.c` — quicksort recursivo de 512 enteros con verificación.
+
+Todas son enteras (sin FPU, corren seguro en este bitstream). El `REPS` de
+cada una apunta a ventanas de ~15–35 s a 10 MHz; se ajusta en el Makefile si
+la primera corrida queda corta o larga.
+
 `harness.S` + `link.ld` + `platform.inc` forman el arnés común: resetean los CSR
 del clasificador, corren el kernel un número fijo de repeticiones y dejan los
 conteos listos para que el banco los lea por JTAG.

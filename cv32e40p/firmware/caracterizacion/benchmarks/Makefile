@@ -8,7 +8,11 @@ CC    := $(CROSS)gcc
 
 BENCH_INT := sha256 primes conv floyd bitcount fixmul bsearch wmul divsum mixed
 BENCH_FP  := fpgain fpalu fpmem ycbcr
-ELFS := $(addsuffix .elf,$(BENCH_INT) $(BENCH_FP))
+# Cargas REALES en C (algoritmos completos compilados por GCC, sin ajustar la
+# mezcla de instrucciones). REPS apunta a ventanas de ~15-35 s a 10 MHz;
+# ajustar tras la primera corrida si la ventana queda corta o larga.
+BENCH_C := aes128 dijkstra dct8x8 rle sieve qsort
+ELFS := $(addsuffix .elf,$(BENCH_INT) $(BENCH_FP) $(BENCH_C))
 
 FLAGS  := -nostdlib -nostartfiles -static -Os -g -mabi=ilp32 \
 	-Wl,-T,link.ld -Wl,--build-id=none -I.
@@ -21,6 +25,9 @@ $(addsuffix .elf,$(BENCH_FP)): ARCH := rv32imfc
 all: $(ELFS)
 
 %.elf: wl_%.S harness.S platform.inc link.ld
+	$(CC) $(KFLAGS) -march=$(ARCH) -o $@ harness.S $<
+
+%.elf: wl_%.c harness.S platform.inc link.ld
 	$(CC) $(KFLAGS) -march=$(ARCH) -o $@ harness.S $<
 
 clean:

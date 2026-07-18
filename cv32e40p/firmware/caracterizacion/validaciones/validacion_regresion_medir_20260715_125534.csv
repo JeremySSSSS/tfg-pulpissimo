@@ -1,0 +1,2 @@
+fecha,metodo,programa,T_s,P_med_W,P_pred_W,err_pct,temp_C,n_alu,n_mul,n_mulh,n_div,c_div,n_mem,n_ctrl,n_float,mcycle
+2026-07-15 12:56:31,regresion,sha256,5.292,1.164875,1.165384,0.0437,39.37,41790020,0,0,0,0,3360004,1120001,0,52920028

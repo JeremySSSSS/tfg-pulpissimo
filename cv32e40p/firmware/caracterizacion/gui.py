@@ -38,6 +38,12 @@ def benchmarks():
         if os.path.isdir(d) else []
 
 
+def es_carga_real_c(n):
+    """Cargas 'reales' en C (algoritmos completos compilados por GCC), a
+    diferencia del conjunto oficial en ensamblador de histograma fijo."""
+    return os.path.exists(os.path.join(HERE, "benchmarks", f"wl_{n}.c"))
+
+
 # ---------------- trabajo en curso (uno a la vez: el banco es exclusivo) ----
 class Trabajo:
     def __init__(self):
@@ -181,8 +187,11 @@ def estado():
 # ---------------- pagina --------------------------------------------------
 def pagina():
     bm = benchmarks()
-    chk = lambda ns, grp: "".join(  # noqa: E731
-        f'<label class="chip"><input type="checkbox" name="{grp}" value="{n}" checked>{n}</label>'
+    bm_of = [n for n in bm if not es_carga_real_c(n)]   # oficiales (.S)
+    bm_c = [n for n in bm if es_carga_real_c(n)]        # reales en C
+    chk = lambda ns, grp, on=True: "".join(  # noqa: E731
+        f'<label class="chip"><input type="checkbox" name="{grp}" value="{n}"'
+        f'{" checked" if on else ""}>{n}</label>'
         for n in ns)
     return f"""<!doctype html><html lang="es"><head><meta charset="utf-8">
 <title>Banco TFG &mdash; caracterizacion CV32E40P</title>
@@ -242,7 +251,10 @@ def pagina():
   linea base <select id="vpidle"><option value="medir" selected>medir ahora</option>
   <option value="archivo">archivo (caracterizacion)</option></select>
   campanas <input type="number" id="vn" value="1" min="1" max="10" style="width:52px"></div>
- <div>{chk(bm, "vprog")}</div>
+ <div class="nota">conjunto oficial (.S, histograma fijo):</div>
+ <div>{chk(bm_of, "vprog")}</div>
+ <div class="nota">cargas reales en C (algoritmos completos, compilador sin ajustar):</div>
+ <div>{chk(bm_c, "vprog", False)}</div>
  <div class="fila"><button onclick="verificar()">Verificar</button>
   <button onclick="marcar('vprog',true)" style="background:#3a4a5c">todos</button>
   <button onclick="marcar('vprog',false)" style="background:#3a4a5c">ninguno</button></div>
