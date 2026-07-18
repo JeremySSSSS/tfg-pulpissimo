@@ -5,7 +5,7 @@
  * largas ni fdiv/fsqrt. Se compila con -ffp-contract=off para que no aparezca
  * fmadd, que esta fuera del conjunto probado de la FPU. */
 #ifndef REPS
-#define REPS 4000
+#define REPS 8000
 #endif
 
 #define NPX 1024
