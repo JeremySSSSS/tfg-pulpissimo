@@ -32,9 +32,11 @@ provee los stubs de libc (printf de depuración, strlen, memset/memcpy):
 - `levenshtein` — distancia de edición entre cadenas.
 - `ns` — búsqueda en arreglo multidimensional.
 - `aqsort` — quicksort de arreglo de enteros (sglib, `-DQUICK_SORT`).
-- `fqsort` — quicksort de arreglo de **floats**: el único kernel float de
-  BEEBS con patrón seguro para esta FPU (solo flw/fsw y comparaciones
-  fle.s/flt.s, cero aritmética FP — verificado por desensamblado).
+- `fqsort` — **RETIRADO**: quicksort de floats con solo comparaciones
+  fle.s/flt.s (cero aritmética FP), pero aun así colgó en hardware: su
+  lazo interno emite comparaciones FP densas (load→flt.s→branch pegados),
+  tercer patrón que la FPU del bitstream no ejecuta de forma estable
+  (junto con las cadenas dependientes y las ráfagas densas).
 - `wl_gray.c` — la única **propia**: RGB→luminancia por píxel en float
   (fadd/fmul/fcvt sin fmadd). Se mantiene porque los kernels float de BEEBS
   usan `double` (soft-float, no ejercita la FPU) o acumulaciones dependientes
