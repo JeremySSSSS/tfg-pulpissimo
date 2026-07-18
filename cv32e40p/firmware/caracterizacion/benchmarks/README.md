@@ -26,8 +26,20 @@ instrucciones (pedidas para validar con código realista):
 - `wl_rle.c` — compresión RLE con verificación de ida y vuelta.
 - `wl_sieve.c` — criba de Eratóstenes hasta 8192 con mapa de bits.
 - `wl_qsort.c` — quicksort recursivo de 512 enteros con verificación.
+- `wl_pctstats.c` — estadísticas por ventanas de tamaño variable: medias y
+  porcentajes con **divisiones de divisor variable** (div/rem reales).
+- `wl_reloj.c` — timestamps a dd:hh:mm:ss + formateo decimal: **divisiones
+  por constantes** que este GCC emite como divu/remu reales (típico de
+  firmware: relojes, calendarios).
+- `wl_gray.c` — RGB→luminancia por píxel en **float** (fadd/fmul/fcvt, sin
+  fmadd por `-ffp-contract=off`; mismo patrón por elemento probado estable
+  en `ycbcr`). La única no-entera: probarla con una corrida corta primero.
 
-Todas son enteras (sin FPU, corren seguro en este bitstream). El `REPS` de
+Cobertura conjunta verificada por desensamblado: alu/mem/ctrl en todas, mul
+en todas, mulh en `dct8x8` (lazos calientes del punto fijo), div en
+`pctstats` y `reloj`, float en `gray`.
+
+Todas menos `gray` son enteras (sin FPU, corren seguro en este bitstream). El `REPS` de
 cada una apunta a ventanas de ~15–35 s a 10 MHz; se ajusta en el Makefile si
 la primera corrida queda corta o larga.
 

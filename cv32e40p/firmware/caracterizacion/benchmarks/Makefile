@@ -11,8 +11,9 @@ BENCH_FP  := fpgain fpalu fpmem ycbcr
 # Cargas REALES en C (algoritmos completos compilados por GCC, sin ajustar la
 # mezcla de instrucciones). REPS apunta a ventanas de ~15-35 s a 10 MHz;
 # ajustar tras la primera corrida si la ventana queda corta o larga.
-BENCH_C := aes128 dijkstra dct8x8 rle sieve qsort
-ELFS := $(addsuffix .elf,$(BENCH_INT) $(BENCH_FP) $(BENCH_C))
+BENCH_C    := aes128 dijkstra dct8x8 rle sieve qsort pctstats reloj
+BENCH_C_FP := gray
+ELFS := $(addsuffix .elf,$(BENCH_INT) $(BENCH_FP) $(BENCH_C) $(BENCH_C_FP))
 
 FLAGS  := -nostdlib -nostartfiles -static -Os -g -mabi=ilp32 \
 	-Wl,-T,link.ld -Wl,--build-id=none -I.
@@ -20,6 +21,10 @@ KFLAGS := $(FLAGS) -fno-builtin -fno-tree-loop-distribute-patterns
 
 ARCH := rv32imc
 $(addsuffix .elf,$(BENCH_FP)): ARCH := rv32imfc
+# gray es float en C: rv32imfc y SIN contraccion a fmadd (fuera del conjunto
+# probado de la FPU de este bitstream)
+gray.elf: ARCH := rv32imfc
+gray.elf: KFLAGS += -ffp-contract=off
 
 .PHONY: all clean
 all: $(ELFS)
