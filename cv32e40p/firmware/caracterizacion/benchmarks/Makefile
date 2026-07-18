@@ -12,7 +12,7 @@ BENCH_FP  := fpgain fpalu fpmem ycbcr
 # beebs/<nombre>.c, adaptados por beebs_wrap.c (interfaz initialise/benchmark/
 # verify -> run_workload). REPS apunta a ventanas de ~15-35 s a 10 MHz;
 # ajustar tras la primera corrida si la ventana queda corta o larga.
-BENCH_BEEBS := mont64 ud jfdctint nettleaes dijkstra huffbench levenshtein ns aqsort
+BENCH_BEEBS := mont64 ud jfdctint nettleaes dijkstra huffbench levenshtein ns aqsort perlin
 # gray: la unica propia (float); los kernels float de BEEBS usan double o
 # acumulaciones dependientes que la FPU de este bitstream no ejecuta estable
 BENCH_C_FP := gray
@@ -28,6 +28,12 @@ levenshtein.elf: REPS := 2000
 ns.elf:          REPS := 10000
 aqsort.elf:      REPS := 3000
 aqsort.elf:      KFLAGS += -DQUICK_SORT
+# perlin (stb_perlin de BEEBS): EXPERIMENTAL. Float real con arboles cortos
+# de fmul/fadd/fsub + tablas (parecido a gray) pero con cadenas de lerps mas
+# profundas al cierre de cada punto: probar en HW con una corrida corta.
+perlin.elf:      REPS := 1200
+perlin.elf:      ARCH := rv32imfc
+perlin.elf:      KFLAGS += -ffp-contract=off
 # fqsort (qsort de BEEBS sobre floats): RETIRADO. Solo usa flw/fsw y
 # comparaciones fle.s/flt.s, pero su lazo interno (load->flt.s->branch
 # pegados) COLGO en hardware: tercera evidencia de la restriccion de la

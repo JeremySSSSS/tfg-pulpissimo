@@ -32,6 +32,14 @@ void *memcpy(void *d, const void *s, unsigned int n) {
   return d;
 }
 
+/* floor() de math.h que usa stb_perlin; sus argumentos alli son siempre
+ * positivos, asi que truncar alcanza (el soft-double lo aporta libgcc) */
+double floor(double x) {
+  int i = (int)x;
+  if ((double)i > x) i--;
+  return i;
+}
+
 void run_workload(void) {
   volatile int sink = 0;
   int r = 0;
