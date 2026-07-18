@@ -252,10 +252,8 @@ def pagina():
   linea base <select id="vpidle"><option value="medir" selected>medir ahora</option>
   <option value="archivo">archivo (caracterizacion)</option></select>
   campanas <input type="number" id="vn" value="1" min="1" max="10" style="width:52px"></div>
- <div class="nota">conjunto oficial (.S, histograma fijo):</div>
- <div>{chk(bm_of, "vprog")}</div>
- <div class="nota">cargas reales (kernels de BEEBS + gray propia en float):</div>
- <div>{chk(bm_c, "vprog", False)}</div>
+ <div class="nota">cargas de validacion (kernels de BEEBS + gray propia en float):</div>
+ <div>{chk(bm, "vprog")}</div>
  <div class="fila"><button onclick="verificar()">Verificar</button>
   <button onclick="marcar('vprog',true)" style="background:#3a4a5c">todos</button>
   <button onclick="marcar('vprog',false)" style="background:#3a4a5c">ninguno</button></div>
