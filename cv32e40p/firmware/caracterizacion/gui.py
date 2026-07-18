@@ -132,8 +132,13 @@ def cmd_de(req):
         progs = [p for p in req.get("progs", []) if p in benchmarks()]
         if not progs:
             raise ValueError("elegi al menos un benchmark")
-        return (f"Verificar {met} ({len(progs)} prog)",
-                [PY + ["verificar.py", "--metodo", met, "--pidle", pidle] + progs])
+        cmd = PY + ["verificar.py", "--metodo", met, "--pidle", pidle] + progs
+        # campanas de validacion: N tandas EN SECUENCIA con el mismo comando;
+        # cada tanda guarda su propio validaciones/validacion_<ts>.csv, asi que
+        # sirven directo para el analisis de estabilidad entre tandas.
+        n = min(max(int(req.get("campanas", 1)), 1), 10)
+        suf = f" x{n} campanas" if n > 1 else ""
+        return (f"Verificar {met} ({len(progs)} prog){suf}", [cmd] * n)
     raise ValueError(f"accion desconocida: {a}")
 
 
@@ -235,11 +240,15 @@ def pagina():
  <div class="fila">metodo <select id="vmet"><option value="regresion">M2 regresion</option>
   <option value="bucles">M1 bucles</option></select>
   linea base <select id="vpidle"><option value="medir" selected>medir ahora</option>
-  <option value="archivo">archivo (caracterizacion)</option></select></div>
+  <option value="archivo">archivo (caracterizacion)</option></select>
+  campanas <input type="number" id="vn" value="1" min="1" max="10" style="width:52px"></div>
  <div>{chk(bm, "vprog")}</div>
  <div class="fila"><button onclick="verificar()">Verificar</button>
   <button onclick="marcar('vprog',true)" style="background:#3a4a5c">todos</button>
-  <button onclick="marcar('vprog',false)" style="background:#3a4a5c">ninguno</button></div></div>
+  <button onclick="marcar('vprog',false)" style="background:#3a4a5c">ninguno</button></div>
+ <div class="nota">con campanas &gt; 1 la tanda completa se repite en secuencia
+  (con su propia linea base si es "medir ahora"); cada tanda queda en su
+  validaciones/validacion_*.csv</div></div>
 
 <div class="card"><h2>Estado</h2><div id="estado">cargando...</div></div>
 
@@ -263,7 +272,7 @@ function m1(){{lanzar({{accion:'m1',cats:sel('m1cat'),repeats:+$('m1rep').value,
 function m2(){{lanzar({{accion:'m2',progs:sel('m2prog'),
  campanas:+$('m2n').value,nobuild:$('m2nb').checked}})}}
 function verificar(){{lanzar({{accion:'verificar',metodo:$('vmet').value,
- pidle:$('vpidle').value,progs:sel('vprog')}})}}
+ pidle:$('vpidle').value,progs:sel('vprog'),campanas:+$('vn').value}})}}
 async function detener(){{await fetch('/stop',{{method:'POST'}})}}
 async function sondear(){{
  const j=await (await fetch('/log?desde='+n)).json();
