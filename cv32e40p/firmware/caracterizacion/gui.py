@@ -39,9 +39,10 @@ def benchmarks():
 
 
 def es_carga_real_c(n):
-    """Cargas 'reales' en C (algoritmos completos compilados por GCC), a
-    diferencia del conjunto oficial en ensamblador de histograma fijo."""
-    return os.path.exists(os.path.join(HERE, "benchmarks", f"wl_{n}.c"))
+    """Cargas 'reales' (kernels de BEEBS en benchmarks/beebs/ o propias en C),
+    a diferencia del conjunto oficial en ensamblador de histograma fijo."""
+    return (os.path.exists(os.path.join(HERE, "benchmarks", "beebs", f"{n}.c"))
+            or os.path.exists(os.path.join(HERE, "benchmarks", f"wl_{n}.c")))
 
 
 # ---------------- trabajo en curso (uno a la vez: el banco es exclusivo) ----
@@ -253,7 +254,7 @@ def pagina():
   campanas <input type="number" id="vn" value="1" min="1" max="10" style="width:52px"></div>
  <div class="nota">conjunto oficial (.S, histograma fijo):</div>
  <div>{chk(bm_of, "vprog")}</div>
- <div class="nota">cargas reales en C (algoritmos completos, compilador sin ajustar):</div>
+ <div class="nota">cargas reales (kernels de BEEBS + gray propia en float):</div>
  <div>{chk(bm_c, "vprog", False)}</div>
  <div class="fila"><button onclick="verificar()">Verificar</button>
   <button onclick="marcar('vprog',true)" style="background:#3a4a5c">todos</button>

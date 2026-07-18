@@ -13,35 +13,38 @@ dirigidas a las categorías con poco soporte natural:
 - `wl_fpalu.S`, `wl_fpmem.S`, `wl_fpgain.S` — cargas float (los patrones que la
   FPU del bitstream ejecuta de forma estable).
 
-## Cargas reales en C
+## Cargas reales (BEEBS)
 
-Además del conjunto oficial hay seis cargas escritas como programas C
-normales, algoritmos completos compilados por GCC sin ajustar la mezcla de
-instrucciones (pedidas para validar con código realista):
+Además del conjunto oficial hay nueve kernels de **BEEBS** (Pallister,
+Hollis y Bennett, 2013 — la suite estándar de benchmarks energéticos para
+embebidos), con las fuentes **sin modificar** en `beebs/` (licencia GPL,
+ver `beebs/LICENSE`) y adaptadas por `beebs_wrap.c`, que conecta su
+interfaz `initialise/benchmark/verify` al `run_workload()` del harness y
+provee los stubs de libc (printf de depuración, strlen, memset/memcpy):
 
-- `wl_aes128.c` — cifrado AES-128 de un buffer de 1 KiB (tablas + XOR/shifts).
-- `wl_dijkstra.c` — caminos mínimos en un grafo de 32 nodos.
-- `wl_dct8x8.c` — DCT 8×8 entera en punto fijo Q15, estilo JPEG (mul/mulh
-  reales por los productos de 64 bits).
-- `wl_rle.c` — compresión RLE con verificación de ida y vuelta.
-- `wl_sieve.c` — criba de Eratóstenes hasta 8192 con mapa de bits.
-- `wl_qsort.c` — quicksort recursivo de 512 enteros con verificación.
-- `wl_pctstats.c` — estadísticas por ventanas de tamaño variable: medias y
-  porcentajes con **divisiones de divisor variable** (div/rem reales).
-- `wl_reloj.c` — timestamps a dd:hh:mm:ss + formateo decimal: **divisiones
-  por constantes** que este GCC emite como divu/remu reales (típico de
-  firmware: relojes, calendarios).
-- `wl_gray.c` — RGB→luminancia por píxel en **float** (fadd/fmul/fcvt, sin
-  fmadd por `-ffp-contract=off`; mismo patrón por elemento probado estable
-  en `ycbcr`). La única no-entera: probarla con una corrida corta primero.
+- `mont64` — multiplicación de Montgomery de 64 bits (aritmética de 128 bits:
+  **mul + mulh densos**).
+- `ud` — descomposición LU entera (**divisiones reales** por pivotes).
+- `jfdctint` — DCT entera de JPEG.
+- `nettleaes` — AES de la biblioteca Nettle.
+- `dijkstra` — caminos mínimos (versión MiBench small).
+- `huffbench` — compresión/descompresión de Huffman.
+- `levenshtein` — distancia de edición entre cadenas.
+- `ns` — búsqueda en arreglo multidimensional.
+- `aqsort` — quicksort de arreglo de enteros (sglib, `-DQUICK_SORT`).
+- `fqsort` — quicksort de arreglo de **floats**: el único kernel float de
+  BEEBS con patrón seguro para esta FPU (solo flw/fsw y comparaciones
+  fle.s/flt.s, cero aritmética FP — verificado por desensamblado).
+- `wl_gray.c` — la única **propia**: RGB→luminancia por píxel en float
+  (fadd/fmul/fcvt sin fmadd). Se mantiene porque los kernels float de BEEBS
+  usan `double` (soft-float, no ejercita la FPU) o acumulaciones dependientes
+  que esta FPU no ejecuta de forma estable. Probarla con una corrida corta
+  primero.
 
-Cobertura conjunta verificada por desensamblado: alu/mem/ctrl en todas, mul
-en todas, mulh en `dct8x8` (lazos calientes del punto fijo), div en
-`pctstats` y `reloj`, float en `gray`.
-
-Todas menos `gray` son enteras (sin FPU, corren seguro en este bitstream). El `REPS` de
-cada una apunta a ventanas de ~15–35 s a 10 MHz; se ajusta en el Makefile si
-la primera corrida queda corta o larga.
+Cobertura del conjunto verificada por desensamblado: alu/mem/ctrl en todos,
+mulh en `mont64`, div en `ud`/`huffbench`/`jfdctint`/`nettleaes`, float en
+`gray`. El `REPS` de cada uno (en el Makefile) apunta a ventanas de
+~15–35 s a 10 MHz; ajustar tras la primera corrida.
 
 `harness.S` + `link.ld` + `platform.inc` forman el arnés común: resetean los CSR
 del clasificador, corren el kernel un número fijo de repeticiones y dejan los

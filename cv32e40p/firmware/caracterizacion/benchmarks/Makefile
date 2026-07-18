@@ -8,12 +8,32 @@ CC    := $(CROSS)gcc
 
 BENCH_INT := sha256 primes conv floyd bitcount fixmul bsearch wmul divsum mixed
 BENCH_FP  := fpgain fpalu fpmem ycbcr
-# Cargas REALES en C (algoritmos completos compilados por GCC, sin ajustar la
-# mezcla de instrucciones). REPS apunta a ventanas de ~15-35 s a 10 MHz;
+# Cargas REALES: kernels de BEEBS (Pallister et al. 2013) sin modificar, en
+# beebs/<nombre>.c, adaptados por beebs_wrap.c (interfaz initialise/benchmark/
+# verify -> run_workload). REPS apunta a ventanas de ~15-35 s a 10 MHz;
 # ajustar tras la primera corrida si la ventana queda corta o larga.
-BENCH_C    := aes128 dijkstra dct8x8 rle sieve qsort pctstats reloj
+BENCH_BEEBS := mont64 ud jfdctint nettleaes dijkstra huffbench levenshtein ns aqsort fqsort
+# gray: la unica propia (float); los kernels float de BEEBS usan double o
+# acumulaciones dependientes que la FPU de este bitstream no ejecuta estable
 BENCH_C_FP := gray
-ELFS := $(addsuffix .elf,$(BENCH_INT) $(BENCH_FP) $(BENCH_C) $(BENCH_C_FP))
+ELFS := $(addsuffix .elf,$(BENCH_INT) $(BENCH_FP) $(BENCH_BEEBS) $(BENCH_C_FP))
+
+mont64.elf:      REPS := 20000
+ud.elf:          REPS := 30000
+jfdctint.elf:    REPS := 30000
+nettleaes.elf:   REPS := 3000
+dijkstra.elf:    REPS := 500
+huffbench.elf:   REPS := 300
+levenshtein.elf: REPS := 2000
+ns.elf:          REPS := 10000
+aqsort.elf:      REPS := 3000
+aqsort.elf:      KFLAGS += -DQUICK_SORT
+# fqsort: el qsort de BEEBS sobre floats -> compares flt.s independientes,
+# el unico kernel float de la suite con patron seguro para esta FPU (probar
+# en HW antes de darlo por bueno)
+fqsort.elf:      REPS := 4000
+fqsort.elf:      ARCH := rv32imfc
+fqsort.elf:      KFLAGS += -ffp-contract=off
 
 FLAGS  := -nostdlib -nostartfiles -static -Os -g -mabi=ilp32 \
 	-Wl,-T,link.ld -Wl,--build-id=none -I.
@@ -34,6 +54,11 @@ all: $(ELFS)
 
 %.elf: wl_%.c harness.S platform.inc link.ld
 	$(CC) $(KFLAGS) -march=$(ARCH) -o $@ harness.S $<
+
+# -lgcc: algun kernel (ud) usa double en su verify_benchmark (fuera de la
+# ventana de medicion); el soft-float lo aporta libgcc
+%.elf: beebs/%.c beebs_wrap.c beebs/support.h harness.S platform.inc link.ld
+	$(CC) $(KFLAGS) -march=$(ARCH) -Ibeebs -DNDEBUG -DREPS=$(REPS) -o $@ harness.S beebs_wrap.c $< -lgcc
 
 clean:
 	rm -f $(ELFS)
