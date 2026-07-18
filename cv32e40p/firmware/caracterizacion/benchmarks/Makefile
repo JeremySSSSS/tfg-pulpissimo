@@ -24,14 +24,18 @@ BENCH_C_FP := gray
 ELFS := $(addsuffix .elf,$(BENCH_INT) $(BENCH_FP) $(BENCH_BEEBS) $(BENCH_C_FP))
 
 mont64.elf:      REPS := 20000
-ud.elf:          REPS := 30000
-jfdctint.elf:    REPS := 30000
+ud.elf:          REPS := 55000
+jfdctint.elf:    REPS := 150000
 nettleaes.elf:   REPS := 3000
-dijkstra.elf:    REPS := 500
-huffbench.elf:   REPS := 300
-levenshtein.elf: REPS := 2000
-ns.elf:          REPS := 10000
-aqsort.elf:      REPS := 3000
+dijkstra.elf:    REPS := 280
+huffbench.elf:   REPS := 1800
+levenshtein.elf: REPS := 4000
+# ns: foo(400) es pura y su resultado se descarta -> GCC la eliminaba
+# entera (tanda del 18-jul: 5 instr/rep). Sin analisis de pureza el
+# llamado sobrevive.
+ns.elf:          REPS := 20000
+ns.elf:          KFLAGS += -fno-ipa-pure-const
+aqsort.elf:      REPS := 18000
 aqsort.elf:      KFLAGS += -DQUICK_SORT
 # perlin (stb_perlin de BEEBS): RETIRADO. Sin instrucciones FP prohibidas
 # (solo fadd/fmul/fsub/fcvt/feq), pero sus cadenas de lerps (~6-9 ops FP
