@@ -17,7 +17,7 @@ BENCH_FP  :=
 # beebs/<nombre>.c, adaptados por beebs_wrap.c (interfaz initialise/benchmark/
 # verify -> run_workload). REPS apunta a ventanas de ~15-35 s a 10 MHz;
 # ajustar tras la primera corrida si la ventana queda corta o larga.
-BENCH_BEEBS := mont64 ud jfdctint nettleaes dijkstra huffbench levenshtein ns aqsort
+BENCH_BEEBS := mont64 ud jfdctint nettleaes strsearch huffbench levenshtein ns aqsort
 # gray: la unica propia (float); los kernels float de BEEBS usan double o
 # acumulaciones dependientes que la FPU de este bitstream no ejecuta estable
 BENCH_C_FP := gray
@@ -27,7 +27,11 @@ mont64.elf:      REPS := 20000
 ud.elf:          REPS := 55000
 jfdctint.elf:    REPS := 150000
 nettleaes.elf:   REPS := 3000
-dijkstra.elf:    REPS := 280
+# dijkstra: RETIRADO. Su reservador de memoria interno (qmalloc sobre pool
+# estatico) siguio dando cuelgues intermitentes; sustituido por strsearch
+# (stringsearch1 de BEEBS: Boyer-Moore-Horspool, mem+ctrl, sin pool).
+# dijkstra.elf:    REPS := 280
+strsearch.elf:   REPS := 8000
 huffbench.elf:   REPS := 1800
 levenshtein.elf: REPS := 4000
 # ns: foo(400) es pura y su resultado se descarta -> GCC la eliminaba
@@ -75,6 +79,11 @@ all: $(ELFS)
 
 %.elf: wl_%.c harness.S platform.inc link.ld
 	$(CC) $(KFLAGS) -march=$(ARCH) -o $@ harness.S $<
+
+# strsearch = stringsearch1 de BEEBS: tres unidades (dos buscadores con
+# estado estatico propio + el arnes del benchmark)
+strsearch.elf: beebs/stringsearch1.c beebs/fast.fwd.inc.c beebs/fast.rev.d12.c beebs_wrap.c beebs/support.h harness.S platform.inc link.ld
+	$(CC) $(KFLAGS) -march=rv32imc -Ibeebs -DNDEBUG -DREPS=$(REPS) -o $@ harness.S beebs_wrap.c beebs/stringsearch1.c beebs/fast.fwd.inc.c beebs/fast.rev.d12.c -lgcc
 
 # -lgcc: algun kernel (ud) usa double en su verify_benchmark (fuera de la
 # ventana de medicion); el soft-float lo aporta libgcc

@@ -16,7 +16,9 @@ en la calibración.
 - `ud` — descomposición LU entera (**divisiones reales** por pivotes).
 - `jfdctint` — DCT entera de JPEG (mul denso).
 - `nettleaes` — AES de la biblioteca Nettle (alu + mem).
-- `dijkstra` — caminos mínimos (versión MiBench small; mem + ctrl).
+- `strsearch` — búsqueda de patrones Boyer–Moore–Horspool (stringsearch1;
+  mem + ctrl). Sustituye a `dijkstra`, retirado por cuelgues intermitentes
+  de su reservador de memoria interno sobre pool estático.
 - `huffbench` — compresión/descompresión de Huffman (mem + ctrl).
 - `levenshtein` — distancia de edición entre cadenas (mem + alu).
 - `ns` — búsqueda en arreglo multidimensional (mem + ctrl).

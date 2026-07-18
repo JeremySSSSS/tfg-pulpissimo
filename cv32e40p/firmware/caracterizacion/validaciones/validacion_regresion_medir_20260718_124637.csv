@@ -1,0 +1,2 @@
+fecha,metodo,programa,T_s,P_med_W,P_pred_W,err_pct,temp_C,n_alu,n_mul,n_mulh,n_div,c_div,n_mem,n_ctrl,n_float,mcycle
+2026-07-18 12:48:13,regresion,aqsort,23.355,1.167052,1.170283,0.2768,39.86,84474017,0,0,0,0,28188011,29232005,0,233550035

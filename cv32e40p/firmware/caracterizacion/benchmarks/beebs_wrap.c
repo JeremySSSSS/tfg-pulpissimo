@@ -14,6 +14,10 @@ int  verify_benchmark(int r);
 /* printf de depuracion de algunos kernels: no hay consola en el SoC */
 int printf(const char *fmt, ...) { (void)fmt; return 0; }
 
+/* abort() de stringsearch1: solo se llamaria con un patron de mas de 256
+ * caracteres, que aqui no existe; debe enlazar de todas formas */
+void abort(void) { for (;;) ; }
+
 unsigned int strlen(const char *s) {
   unsigned int n = 0;
   while (s[n]) n++;
